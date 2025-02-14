@@ -3,7 +3,7 @@ pip-sbom - The (SBOM extended) Python Package Installer
 
 This extended version of pip proves that it's easy and efficient to generate SBOM directly from the Python Package Installer. :confetti_ball:
 
-No asset of pip was modified to include the SBOM generation command.
+This is a plain fork of [pip](https://github.com/pypa/pip). We implemented the SBOM generation command and procedure keeping the original structure and code of pip.
 We introduced `networkx` and `cyclonedx-python-lib` in vendor packages.
 
 You can use the `pip sbom` command by just installing the exteded pip version::
