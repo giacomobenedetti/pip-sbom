@@ -1,6 +1,7 @@
 """
 Eigenvalue spectrum of graphs.
 """
+
 from pip._vendor import networkx as nx
 
 __all__ = [

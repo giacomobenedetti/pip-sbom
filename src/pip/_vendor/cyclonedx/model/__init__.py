@@ -1,3 +1,5 @@
+# This file is part of CycloneDX Python Library
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -25,21 +27,17 @@ from datetime import datetime
 from enum import Enum
 from functools import reduce
 from json import loads as json_loads
-from typing import Any, Dict, FrozenSet, Generator, Iterable, List, Optional, Tuple, Type
+from typing import Any, Dict, FrozenSet, Generator, Iterable, List, Optional, Tuple, Type, Union
+from urllib.parse import quote as url_quote
+from uuid import UUID
 from warnings import warn
 from xml.etree.ElementTree import Element as XmlElement  # nosec B405
 
-from pip._vendor import serializable
-from pip._vendor.sortedcontainers import SortedSet
+from pip._vendor import py_serializable as serializable
+from sortedcontainers import SortedSet
 
-from .. import __version__ as __ThisToolVersion  # noqa: N812
 from .._internal.compare import ComparableTuple as _ComparableTuple
-from ..exception.model import (
-    InvalidLocaleTypeException,
-    InvalidUriException,
-    NoPropertiesProvidedException,
-    UnknownHashTypeException,
-)
+from ..exception.model import InvalidLocaleTypeException, InvalidUriException, UnknownHashTypeException
 from ..exception.serialization import CycloneDxDeserializationException, SerializationOfUnexpectedValueException
 from ..schema.schema import (
     SchemaVersion1Dot0,
@@ -50,6 +48,9 @@ from ..schema.schema import (
     SchemaVersion1Dot5,
     SchemaVersion1Dot6,
 )
+from .bom_ref import BomRef
+
+_BOM_LINK_PREFIX = 'urn:cdx:'
 
 
 @serializable.serializable_enum
@@ -58,7 +59,7 @@ class DataFlow(str, Enum):
     This is our internal representation of the dataFlowType simple type within the CycloneDX standard.
 
     .. note::
-        See the CycloneDX Schema: https://cyclonedx.org/docs/1.4/xml/#type_dataFlowType
+        See the CycloneDX Schema: https://cyclonedx.org/docs/1.6/xml/#type_dataFlowType
     """
     INBOUND = 'inbound'
     OUTBOUND = 'outbound'
@@ -76,7 +77,7 @@ class DataClassification:
 
     .. note::
         See the CycloneDX Schema for dataClassificationType:
-        https://cyclonedx.org/docs/1.4/xml/#type_dataClassificationType
+        https://cyclonedx.org/docs/1.6/xml/#type_dataClassificationType
     """
 
     def __init__(
@@ -127,22 +128,23 @@ class DataClassification:
     def classification(self, classification: str) -> None:
         self._classification = classification
 
+    def __comparable_tuple(self) -> _ComparableTuple:
+        return _ComparableTuple((
+            self.flow, self.classification
+        ))
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, DataClassification):
-            return hash(other) == hash(self)
+            return self.__comparable_tuple() == other.__comparable_tuple()
         return False
 
     def __lt__(self, other: object) -> bool:
         if isinstance(other, DataClassification):
-            return _ComparableTuple((
-                self.flow, self.classification
-            )) < _ComparableTuple((
-                other.flow, other.classification
-            ))
+            return self.__comparable_tuple() < other.__comparable_tuple()
         return NotImplemented
 
     def __hash__(self) -> int:
-        return hash((self.flow, self.classification))
+        return hash(self.__comparable_tuple())
 
     def __repr__(self) -> str:
         return f'<DataClassification flow={self.flow}>'
@@ -154,7 +156,7 @@ class Encoding(str, Enum):
     This is our internal representation of the encoding simple type within the CycloneDX standard.
 
     .. note::
-        See the CycloneDX Schema: https://cyclonedx.org/docs/1.4/#type_encoding
+        See the CycloneDX Schema: https://cyclonedx.org/docs/1.6/#type_encoding
     """
     BASE_64 = 'base64'
 
@@ -165,7 +167,7 @@ class AttachedText:
     This is our internal representation of the `attachedTextType` complex type within the CycloneDX standard.
 
     .. note::
-        See the CycloneDX Schema for hashType: https://cyclonedx.org/docs/1.3/#type_attachedTextType
+        See the CycloneDX Schema for hashType: https://cyclonedx.org/docs/1.6/#type_attachedTextType
     """
 
     DEFAULT_CONTENT_TYPE = 'text/plain'
@@ -230,22 +232,23 @@ class AttachedText:
     def content(self, content: str) -> None:
         self._content = content
 
+    def __comparable_tuple(self) -> _ComparableTuple:
+        return _ComparableTuple((
+            self.content_type, self.encoding, self.content,
+        ))
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, AttachedText):
-            return hash(other) == hash(self)
+            return self.__comparable_tuple() == other.__comparable_tuple()
         return False
 
     def __lt__(self, other: Any) -> bool:
         if isinstance(other, AttachedText):
-            return _ComparableTuple((
-                self.content_type, self.content, self.encoding
-            )) < _ComparableTuple((
-                other.content_type, other.content, other.encoding
-            ))
+            return self.__comparable_tuple() < other.__comparable_tuple()
         return NotImplemented
 
     def __hash__(self) -> int:
-        return hash((self.content, self.content_type, self.encoding))
+        return hash(self.__comparable_tuple())
 
     def __repr__(self) -> str:
         return f'<AttachedText content-type={self.content_type}, encoding={self.encoding}>'
@@ -257,7 +260,7 @@ class HashAlgorithm(str, Enum):
     This is our internal representation of the hashAlg simple type within the CycloneDX standard.
 
     .. note::
-        See the CycloneDX Schema: https://cyclonedx.org/docs/1.3/#type_hashAlg
+        See the CycloneDX Schema: https://cyclonedx.org/docs/1.6/#type_hashAlg
     """
     # see `_HashTypeRepositorySerializationHelper.__CASES` for view/case map
     BLAKE2B_256 = 'BLAKE2b-256'  # Only supported in >= 1.2
@@ -380,7 +383,7 @@ class HashType:
     This is our internal representation of the hashType complex type within the CycloneDX standard.
 
     .. note::
-        See the CycloneDX Schema for hashType: https://cyclonedx.org/docs/1.3/#type_hashType
+        See the CycloneDX Schema for hashType: https://cyclonedx.org/docs/1.6/#type_hashType
     """
 
     @staticmethod
@@ -509,22 +512,23 @@ class HashType:
     def content(self, content: str) -> None:
         self._content = content
 
+    def __comparable_tuple(self) -> _ComparableTuple:
+        return _ComparableTuple((
+            self.alg, self.content
+        ))
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, HashType):
-            return hash(other) == hash(self)
+            return self.__comparable_tuple() == other.__comparable_tuple()
         return False
 
     def __lt__(self, other: Any) -> bool:
         if isinstance(other, HashType):
-            return _ComparableTuple((
-                self.alg, self.content
-            )) < _ComparableTuple((
-                other.alg, other.content
-            ))
+            return self.__comparable_tuple() < other.__comparable_tuple()
         return NotImplemented
 
     def __hash__(self) -> int:
-        return hash((self.alg, self.content))
+        return hash(self.__comparable_tuple())
 
     def __repr__(self) -> str:
         return f'<HashType {self.alg.name}:{self.content}>'
@@ -536,7 +540,7 @@ class ExternalReferenceType(str, Enum):
     Enum object that defines the permissible 'types' for an External Reference according to the CycloneDX schema.
 
     .. note::
-        See the CycloneDX Schema definition: https://cyclonedx.org/docs/1.3/#type_externalReferenceType
+        See the CycloneDX Schema definition: https://cyclonedx.org/docs/1.6/#type_externalReferenceType
     """
     # see `_ExternalReferenceSerializationHelper.__CASES` for view/case map
     ADVERSARY_MODEL = 'adversary-model'  # Only supported in >= 1.5
@@ -688,6 +692,8 @@ class XsUri(serializable.helpers.BaseHelper):
 
     __SPEC_REPLACEMENTS = (
         (' ', '%20'),
+        ('"', '%22'),
+        ("'", '%27'),
         ('[', '%5B'),
         (']', '%5D'),
         ('<', '%3C'),
@@ -725,7 +731,7 @@ class XsUri(serializable.helpers.BaseHelper):
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, XsUri):
-            return hash(other) == hash(self)
+            return self._uri == other._uri
         return False
 
     def __lt__(self, other: Any) -> bool:
@@ -764,6 +770,36 @@ class XsUri(serializable.helpers.BaseHelper):
                 f'XsUri string supplied does not parse: {o!r}'
             ) from err
 
+    @classmethod
+    def make_bom_link(
+        cls,
+        serial_number: Union[UUID, str],
+        version: int = 1,
+        bom_ref: Optional[Union[str, BomRef]] = None
+    ) -> 'XsUri':
+        """
+        Generate a BOM-Link URI.
+
+        Args:
+            serial_number: The unique serial number of the BOM.
+            version: The version of the BOM. The default version is 1.
+            bom_ref: The unique identifier of the component, service, or vulnerability within the BOM.
+
+        Returns:
+            XsUri: Instance of XsUri with the generated BOM-Link URI.
+        """
+        bom_ref_part = f'#{url_quote(str(bom_ref))}' if bom_ref else ''
+        return cls(f'{_BOM_LINK_PREFIX}{serial_number}/{version}{bom_ref_part}')
+
+    def is_bom_link(self) -> bool:
+        """
+        Check if the URI is a BOM-Link.
+
+        Returns:
+            `bool`
+        """
+        return self._uri.startswith(_BOM_LINK_PREFIX)
+
 
 @serializable.serializable_class
 class ExternalReference:
@@ -772,7 +808,7 @@ class ExternalReference:
     a CycloneDX BOM document.
 
     .. note::
-        See the CycloneDX Schema definition: https://cyclonedx.org/docs/1.3/#type_externalReference
+        See the CycloneDX Schema definition: https://cyclonedx.org/docs/1.6/#type_externalReference
     """
 
     def __init__(
@@ -854,25 +890,24 @@ class ExternalReference:
     def hashes(self, hashes: Iterable[HashType]) -> None:
         self._hashes = SortedSet(hashes)
 
+    def __comparable_tuple(self) -> _ComparableTuple:
+        return _ComparableTuple((
+            self._type, self._url, self._comment,
+            _ComparableTuple(self._hashes)
+        ))
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, ExternalReference):
-            return hash(other) == hash(self)
+            return self.__comparable_tuple() == other.__comparable_tuple()
         return False
 
     def __lt__(self, other: Any) -> bool:
         if isinstance(other, ExternalReference):
-            return _ComparableTuple((
-                self._type, self._url, self._comment
-            )) < _ComparableTuple((
-                other._type, other._url, other._comment
-            ))
+            return self.__comparable_tuple() < other.__comparable_tuple()
         return NotImplemented
 
     def __hash__(self) -> int:
-        return hash((
-            self._type, self._url, self._comment,
-            tuple(sorted(self._hashes, key=hash))
-        ))
+        return hash(self.__comparable_tuple())
 
     def __repr__(self) -> str:
         return f'<ExternalReference {self.type.name}, {self.url}>'
@@ -885,7 +920,7 @@ class Property:
     a CycloneDX BOM document.
 
     .. note::
-        See the CycloneDX Schema definition: https://cyclonedx.org/docs/1.4/xml/#type_propertyType
+        See the CycloneDX Schema definition: https://cyclonedx.org/docs/1.6/xml/#type_propertyType
 
     Specifies an individual property with a name and value.
     """
@@ -931,22 +966,23 @@ class Property:
     def value(self, value: Optional[str]) -> None:
         self._value = value
 
+    def __comparable_tuple(self) -> _ComparableTuple:
+        return _ComparableTuple((
+            self.name, self.value
+        ))
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Property):
-            return hash(other) == hash(self)
+            return self.__comparable_tuple() == other.__comparable_tuple()
         return False
 
     def __lt__(self, other: Any) -> bool:
         if isinstance(other, Property):
-            return _ComparableTuple((
-                self.name, self.value
-            )) < _ComparableTuple((
-                other.name, other.value
-            ))
+            return self.__comparable_tuple() < other.__comparable_tuple()
         return NotImplemented
 
     def __hash__(self) -> int:
-        return hash((self.name, self.value))
+        return hash(self.__comparable_tuple())
 
     def __repr__(self) -> str:
         return f'<Property name={self.name}>'
@@ -959,7 +995,7 @@ class NoteText:
     a CycloneDX BOM document.
 
     .. note::
-        See the CycloneDX Schema definition: https://cyclonedx.org/docs/1.4/xml/#type_releaseNotesType
+        See the CycloneDX Schema definition: https://cyclonedx.org/docs/1.6/xml/#type_releaseNotesType
     """
 
     DEFAULT_CONTENT_TYPE: str = 'text/plain'
@@ -1022,22 +1058,23 @@ class NoteText:
     def encoding(self, encoding: Optional[Encoding]) -> None:
         self._encoding = encoding
 
+    def __comparable_tuple(self) -> _ComparableTuple:
+        return _ComparableTuple((
+            self.content, self.content_type, self.encoding
+        ))
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, NoteText):
-            return hash(other) == hash(self)
+            return self.__comparable_tuple() == other.__comparable_tuple()
         return False
 
     def __lt__(self, other: Any) -> bool:
         if isinstance(other, NoteText):
-            return _ComparableTuple((
-                self.content, self.content_type, self.encoding
-            )) < _ComparableTuple((
-                other.content, other.content_type, other.encoding
-            ))
+            return self.__comparable_tuple() < other.__comparable_tuple()
         return NotImplemented
 
     def __hash__(self) -> int:
-        return hash((self.content, self.content_type, self.encoding))
+        return hash(self.__comparable_tuple())
 
     def __repr__(self) -> str:
         return f'<NoteText content_type={self.content_type}, encoding={self.encoding}>'
@@ -1050,7 +1087,7 @@ class Note:
     a CycloneDX BOM document.
 
     .. note::
-        See the CycloneDX Schema definition: https://cyclonedx.org/docs/1.4/xml/#type_releaseNotesType
+        See the CycloneDX Schema definition: https://cyclonedx.org/docs/1.6/xml/#type_releaseNotesType
 
     @todo: Replace ``NoteText`` with ``AttachedText``?
     """
@@ -1106,158 +1143,26 @@ class Note:
                     " ISO-3166 (or higher) country code. according to ISO-639 format. Examples include: 'en', 'en-US'."
                 )
 
+    def __comparable_tuple(self) -> _ComparableTuple:
+        return _ComparableTuple((
+            self.locale, self.text
+        ))
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Note):
-            return hash(other) == hash(self)
+            return self.__comparable_tuple() == other.__comparable_tuple()
         return False
 
     def __lt__(self, other: Any) -> bool:
         if isinstance(other, Note):
-            return _ComparableTuple((
-                self.locale, self.text
-            )) < _ComparableTuple((
-                other.locale, other.text
-            ))
+            return self.__comparable_tuple() < other.__comparable_tuple()
         return NotImplemented
 
     def __hash__(self) -> int:
-        return hash((self.text, self.locale))
+        return hash(self.__comparable_tuple())
 
     def __repr__(self) -> str:
         return f'<Note id={id(self)}, locale={self.locale}>'
-
-
-@serializable.serializable_class
-class Tool:
-    """
-    This is our internal representation of the `toolType` complex type within the CycloneDX standard.
-
-    Tool(s) are the things used in the creation of the CycloneDX document.
-
-    Tool might be deprecated since CycloneDX 1.5, but it is not deprecated in this library.
-    In fact, this library will try to provide a compatibility layer if needed.
-
-    .. note::
-        See the CycloneDX Schema for toolType: https://cyclonedx.org/docs/1.3/#type_toolType
-    """
-
-    def __init__(
-        self, *,
-        vendor: Optional[str] = None,
-        name: Optional[str] = None,
-        version: Optional[str] = None,
-        hashes: Optional[Iterable[HashType]] = None,
-        external_references: Optional[Iterable[ExternalReference]] = None,
-    ) -> None:
-        self.vendor = vendor
-        self.name = name
-        self.version = version
-        self.hashes = hashes or []  # type:ignore[assignment]
-        self.external_references = external_references or []  # type:ignore[assignment]
-
-    @property
-    @serializable.xml_sequence(1)
-    @serializable.xml_string(serializable.XmlStringSerializationType.NORMALIZED_STRING)
-    def vendor(self) -> Optional[str]:
-        """
-        The name of the vendor who created the tool.
-
-        Returns:
-            `str` if set else `None`
-        """
-        return self._vendor
-
-    @vendor.setter
-    def vendor(self, vendor: Optional[str]) -> None:
-        self._vendor = vendor
-
-    @property
-    @serializable.xml_sequence(2)
-    @serializable.xml_string(serializable.XmlStringSerializationType.NORMALIZED_STRING)
-    def name(self) -> Optional[str]:
-        """
-        The name of the tool.
-
-        Returns:
-             `str` if set else `None`
-        """
-        return self._name
-
-    @name.setter
-    def name(self, name: Optional[str]) -> None:
-        self._name = name
-
-    @property
-    @serializable.xml_sequence(3)
-    @serializable.xml_string(serializable.XmlStringSerializationType.NORMALIZED_STRING)
-    def version(self) -> Optional[str]:
-        """
-        The version of the tool.
-
-        Returns:
-             `str` if set else `None`
-        """
-        return self._version
-
-    @version.setter
-    def version(self, version: Optional[str]) -> None:
-        self._version = version
-
-    @property
-    @serializable.type_mapping(_HashTypeRepositorySerializationHelper)
-    @serializable.xml_sequence(4)
-    def hashes(self) -> 'SortedSet[HashType]':
-        """
-        The hashes of the tool (if applicable).
-
-        Returns:
-            Set of `HashType`
-        """
-        return self._hashes
-
-    @hashes.setter
-    def hashes(self, hashes: Iterable[HashType]) -> None:
-        self._hashes = SortedSet(hashes)
-
-    @property
-    @serializable.view(SchemaVersion1Dot4)
-    @serializable.view(SchemaVersion1Dot5)
-    @serializable.view(SchemaVersion1Dot6)
-    @serializable.xml_array(serializable.XmlArraySerializationType.NESTED, 'reference')
-    @serializable.xml_sequence(5)
-    def external_references(self) -> 'SortedSet[ExternalReference]':
-        """
-        External References provides a way to document systems, sites, and information that may be relevant but which
-        are not included with the BOM.
-
-        Returns:
-            Set of `ExternalReference`
-        """
-        return self._external_references
-
-    @external_references.setter
-    def external_references(self, external_references: Iterable[ExternalReference]) -> None:
-        self._external_references = SortedSet(external_references)
-
-    def __eq__(self, other: object) -> bool:
-        if isinstance(other, Tool):
-            return hash(other) == hash(self)
-        return False
-
-    def __lt__(self, other: Any) -> bool:
-        if isinstance(other, Tool):
-            return _ComparableTuple((
-                self.vendor, self.name, self.version
-            )) < _ComparableTuple((
-                other.vendor, other.name, other.version
-            ))
-        return NotImplemented
-
-    def __hash__(self) -> int:
-        return hash((self.vendor, self.name, self.version, tuple(self.hashes), tuple(self.external_references)))
-
-    def __repr__(self) -> str:
-        return f'<Tool name={self.name}, version={self.version}, vendor={self.vendor}>'
 
 
 @serializable.serializable_class
@@ -1266,7 +1171,7 @@ class IdentifiableAction:
     This is our internal representation of the `identifiableActionType` complex type.
 
     .. note::
-        See the CycloneDX specification: https://cyclonedx.org/docs/1.4/xml/#type_identifiableActionType
+        See the CycloneDX specification: https://cyclonedx.org/docs/1.6/xml/#type_identifiableActionType
     """
 
     def __init__(
@@ -1275,11 +1180,6 @@ class IdentifiableAction:
         name: Optional[str] = None,
         email: Optional[str] = None,
     ) -> None:
-        if not timestamp and not name and not email:
-            raise NoPropertiesProvidedException(
-                'At least one of `timestamp`, `name` or `email` must be provided for an `IdentifiableAction`.'
-            )
-
         self.timestamp = timestamp
         self.name = name
         self.email = email
@@ -1329,22 +1229,23 @@ class IdentifiableAction:
     def email(self, email: Optional[str]) -> None:
         self._email = email
 
+    def __comparable_tuple(self) -> _ComparableTuple:
+        return _ComparableTuple((
+            self.timestamp, self.name, self.email
+        ))
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, IdentifiableAction):
-            return hash(other) == hash(self)
+            return self.__comparable_tuple() == other.__comparable_tuple()
         return False
 
     def __lt__(self, other: Any) -> bool:
         if isinstance(other, IdentifiableAction):
-            return _ComparableTuple((
-                self.timestamp, self.name, self.email
-            )) < _ComparableTuple((
-                other.timestamp, other.name, other.email
-            ))
+            return self.__comparable_tuple() < other.__comparable_tuple()
         return NotImplemented
 
     def __hash__(self) -> int:
-        return hash((self.timestamp, self.name, self.email))
+        return hash(self.__comparable_tuple())
 
     def __repr__(self) -> str:
         return f'<IdentifiableAction name={self.name}, email={self.email}>'
@@ -1356,7 +1257,7 @@ class Copyright:
     This is our internal representation of the `copyrightsType` complex type.
 
     .. note::
-        See the CycloneDX specification: https://cyclonedx.org/docs/1.4/xml/#type_copyrightsType
+        See the CycloneDX specification: https://cyclonedx.org/docs/1.6/xml/#type_copyrightsType
     """
 
     def __init__(
@@ -1382,56 +1283,16 @@ class Copyright:
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Copyright):
-            return hash(other) == hash(self)
+            return self._text == other._text
         return False
 
     def __lt__(self, other: Any) -> bool:
         if isinstance(other, Copyright):
-            return self.text < other.text
+            return self._text < other._text
         return NotImplemented
 
     def __hash__(self) -> int:
-        return hash(self.text)
+        return hash(self._text)
 
     def __repr__(self) -> str:
         return f'<Copyright text={self.text}>'
-
-
-ThisTool = Tool(
-    vendor='CycloneDX',
-    name='cyclonedx-python-lib',
-    version=__ThisToolVersion or 'UNKNOWN',
-    external_references=[
-        ExternalReference(
-            type=ExternalReferenceType.BUILD_SYSTEM,
-            url=XsUri('https://github.com/CycloneDX/cyclonedx-python-lib/actions')
-        ),
-        ExternalReference(
-            type=ExternalReferenceType.DISTRIBUTION,
-            url=XsUri('https://pypi.org/project/cyclonedx-python-lib/')
-        ),
-        ExternalReference(
-            type=ExternalReferenceType.DOCUMENTATION,
-            url=XsUri('https://cyclonedx-python-library.readthedocs.io/')
-        ),
-        ExternalReference(
-            type=ExternalReferenceType.ISSUE_TRACKER,
-            url=XsUri('https://github.com/CycloneDX/cyclonedx-python-lib/issues')
-        ),
-        ExternalReference(
-            type=ExternalReferenceType.LICENSE,
-            url=XsUri('https://github.com/CycloneDX/cyclonedx-python-lib/blob/main/LICENSE')
-        ),
-        ExternalReference(
-            type=ExternalReferenceType.RELEASE_NOTES,
-            url=XsUri('https://github.com/CycloneDX/cyclonedx-python-lib/blob/main/CHANGELOG.md')
-        ),
-        ExternalReference(
-            type=ExternalReferenceType.VCS,
-            url=XsUri('https://github.com/CycloneDX/cyclonedx-python-lib')
-        ),
-        ExternalReference(
-            type=ExternalReferenceType.WEBSITE,
-            url=XsUri('https://github.com/CycloneDX/cyclonedx-python-lib/#readme')
-        )
-    ])

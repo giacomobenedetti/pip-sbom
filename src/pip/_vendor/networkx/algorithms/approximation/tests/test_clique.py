@@ -1,6 +1,5 @@
 """Unit tests for the :mod:`networkx.algorithms.approximation.clique` module."""
 
-
 from pip._vendor import networkx as nx
 from pip._vendor.networkx.algorithms.approximation import (
     clique_removal,

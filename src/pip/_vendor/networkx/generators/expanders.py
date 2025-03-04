@@ -1,6 +1,5 @@
-"""Provides explicit constructions of expander graphs.
+"""Provides explicit constructions of expander graphs."""
 
-"""
 import itertools
 
 from pip._vendor import networkx as nx

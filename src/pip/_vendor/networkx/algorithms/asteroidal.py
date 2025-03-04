@@ -10,6 +10,7 @@ an AT-free graph. The class of AT-free graphs is a graph class for which
 many NP-complete problems are solvable in polynomial time. Amongst them,
 independent set and coloring.
 """
+
 from pip._vendor import networkx as nx
 from pip._vendor.networkx.utils import not_implemented_for
 

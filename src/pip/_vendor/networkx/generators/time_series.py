@@ -1,6 +1,7 @@
 """
 Time Series Graphs
 """
+
 import itertools
 
 from pip._vendor import networkx as nx

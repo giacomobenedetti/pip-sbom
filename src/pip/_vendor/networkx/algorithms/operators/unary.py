@@ -1,4 +1,5 @@
 """Unary operations on graphs"""
+
 from pip._vendor import networkx as nx
 
 __all__ = ["complement", "reverse"]

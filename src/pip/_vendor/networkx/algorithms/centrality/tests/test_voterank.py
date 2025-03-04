@@ -1,7 +1,6 @@
 """
-    Unit tests for VoteRank.
+Unit tests for VoteRank.
 """
-
 
 from pip._vendor import networkx as nx
 

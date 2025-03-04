@@ -1,4 +1,5 @@
 """Unit tests for the broadcasting module."""
+
 import math
 
 from pip._vendor import networkx as nx

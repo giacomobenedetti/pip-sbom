@@ -1,4 +1,5 @@
 """Unit tests for the :mod:`networkx.generators.time_series` module."""
+
 import itertools
 
 from pip._vendor import networkx as nx

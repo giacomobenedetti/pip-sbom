@@ -1,4 +1,5 @@
 """Original NetworkX graph tests"""
+
 import pytest
 
 from pip._vendor import networkx

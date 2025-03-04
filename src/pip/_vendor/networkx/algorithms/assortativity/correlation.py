@@ -1,5 +1,5 @@
-"""Node assortativity coefficients and correlation measures.
-"""
+"""Node assortativity coefficients and correlation measures."""
+
 from pip._vendor import networkx as nx
 from pip._vendor.networkx.algorithms.assortativity.mixing import (
     attribute_mixing_matrix,

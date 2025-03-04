@@ -1,3 +1,5 @@
+# This file is part of CycloneDX Python Library
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -119,5 +121,13 @@ class LicenseExpressionAlongWithOthersException(CycloneDxModelException):
     If a LicenseExpression exists, than it must stand alone.
 
     See https://github.com/CycloneDX/specification/pull/205
+    """
+    pass
+
+
+class InvalidCreIdException(CycloneDxModelException):
+    """
+    Raised when a supplied value for an CRE ID does not meet the format requirements
+    as defined at https://opencre.org/
     """
     pass

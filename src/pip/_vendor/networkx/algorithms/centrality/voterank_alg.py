@@ -1,4 +1,5 @@
 """Algorithm to select influential nodes in a graph using VoteRank."""
+
 from pip._vendor import networkx as nx
 
 __all__ = ["voterank"]

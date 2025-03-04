@@ -1,4 +1,5 @@
 """Algorithms to calculate reciprocity in a directed graph."""
+
 from pip._vendor import networkx as nx
 from pip._vendor.networkx import NetworkXError
 

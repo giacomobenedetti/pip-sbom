@@ -1,3 +1,5 @@
+# This file is part of CycloneDX Python Library
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,24 +20,23 @@
 This set of classes represents the data that is possible about known Services.
 
 .. note::
-    See the CycloneDX Schema extension definition https://cyclonedx.org/docs/1.4/xml/#type_servicesType
+    See the CycloneDX Schema extension definition https://cyclonedx.org/docs/1.6/xml/#type_servicesType
 """
 
 
 from typing import Any, Iterable, Optional, Union
 
-from pip._vendor import serializable
-from pip._vendor.sortedcontainers import SortedSet
+from pip._vendor import py_serializable as serializable
+from sortedcontainers import SortedSet
 
-from pip._vendor.cyclonedx.serialization import BomRefHelper, LicenseRepositoryHelper
-
+from .._internal.bom_ref import bom_ref_from_str as _bom_ref_from_str
 from .._internal.compare import ComparableTuple as _ComparableTuple
 from ..schema.schema import SchemaVersion1Dot3, SchemaVersion1Dot4, SchemaVersion1Dot5, SchemaVersion1Dot6
 from . import DataClassification, ExternalReference, Property, XsUri
 from .bom_ref import BomRef
 from .contact import OrganizationalEntity
 from .dependency import Dependable
-from .license import License, LicenseRepository
+from .license import License, LicenseRepository, _LicenseRepositorySerializationHelper
 from .release_note import ReleaseNotes
 
 
@@ -45,7 +46,7 @@ class Service(Dependable):
     Class that models the `service` complex type in the CycloneDX schema.
 
     .. note::
-        See the CycloneDX schema: https://cyclonedx.org/docs/1.4/xml/#type_service
+        See the CycloneDX schema: https://cyclonedx.org/docs/1.6/xml/#type_service
     """
 
     def __init__(
@@ -66,10 +67,7 @@ class Service(Dependable):
         services: Optional[Iterable['Service']] = None,
         release_notes: Optional[ReleaseNotes] = None,
     ) -> None:
-        if isinstance(bom_ref, BomRef):
-            self._bom_ref = bom_ref
-        else:
-            self._bom_ref = BomRef(value=str(bom_ref) if bom_ref else None)
+        self._bom_ref = _bom_ref_from_str(bom_ref)
         self.provider = provider
         self.group = group
         self.name = name
@@ -87,15 +85,13 @@ class Service(Dependable):
 
     @property
     @serializable.json_name('bom-ref')
-    @serializable.type_mapping(BomRefHelper)
+    @serializable.type_mapping(BomRef)
     @serializable.xml_attribute()
     @serializable.xml_name('bom-ref')
     def bom_ref(self) -> BomRef:
         """
         An optional identifier which can be used to reference the service elsewhere in the BOM. Uniqueness is enforced
         within all elements and children of the root-level bom element.
-
-        If a value was not provided in the constructor, a UUIDv4 will have been assigned.
 
         Returns:
            `BomRef` unique identifier for this Service
@@ -265,7 +261,7 @@ class Service(Dependable):
         self._data = SortedSet(data)
 
     @property
-    @serializable.type_mapping(LicenseRepositoryHelper)
+    @serializable.type_mapping(_LicenseRepositorySerializationHelper)
     @serializable.xml_sequence(11)
     def licenses(self) -> LicenseRepository:
         """
@@ -356,26 +352,29 @@ class Service(Dependable):
     def release_notes(self, release_notes: Optional[ReleaseNotes]) -> None:
         self._release_notes = release_notes
 
+    def __comparable_tuple(self) -> _ComparableTuple:
+        return _ComparableTuple((
+            self.group, self.name, self.version,
+            self.bom_ref.value,
+            self.provider, self.description,
+            self.authenticated, _ComparableTuple(self.data), _ComparableTuple(self.endpoints),
+            _ComparableTuple(self.external_references), _ComparableTuple(self.licenses),
+            _ComparableTuple(self.properties), self.release_notes, _ComparableTuple(self.services),
+            self.x_trust_boundary
+        ))
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Service):
-            return hash(other) == hash(self)
+            return self.__comparable_tuple() == other.__comparable_tuple()
         return False
 
     def __lt__(self, other: Any) -> bool:
         if isinstance(other, Service):
-            return _ComparableTuple((
-                self.group, self.name, self.version
-            )) < _ComparableTuple((
-                other.group, other.name, other.version
-            ))
+            return self.__comparable_tuple() < other.__comparable_tuple()
         return NotImplemented
 
     def __hash__(self) -> int:
-        return hash((
-            self.authenticated, tuple(self.data), self.description, tuple(self.endpoints),
-            tuple(self.external_references), self.group, tuple(self.licenses), self.name, tuple(self.properties),
-            self.provider, self.release_notes, tuple(self.services), self.version, self.x_trust_boundary
-        ))
+        return hash(self.__comparable_tuple())
 
     def __repr__(self) -> str:
         return f'<Service bom-ref={self.bom_ref}, group={self.group}, name={self.name}, version={self.version}>'

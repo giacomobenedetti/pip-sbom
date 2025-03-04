@@ -1,4 +1,4 @@
-# This file is part of CycloneDX Python Lib
+# This file is part of CycloneDX Python Library
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Literal, Type
 
-from pip._vendor.serializable import ViewType
+from pip._vendor.py_serializable import ViewType
 
 from . import SchemaVersion
 
@@ -28,7 +28,7 @@ class BaseSchemaVersion(ABC, ViewType):
     @property
     @abstractmethod
     def schema_version_enum(self) -> SchemaVersion:
-        ...
+        ...  # pragma: no cover
 
     def get_schema_version(self) -> str:
         return self.schema_version_enum.to_version()

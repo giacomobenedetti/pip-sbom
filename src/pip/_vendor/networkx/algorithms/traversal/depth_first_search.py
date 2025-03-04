@@ -1,4 +1,5 @@
 """Basic algorithms for depth-first searching the nodes of a graph."""
+
 from collections import defaultdict
 
 from pip._vendor import networkx as nx

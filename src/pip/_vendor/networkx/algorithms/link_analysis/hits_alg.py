@@ -1,5 +1,5 @@
-"""Hubs and authorities analysis of graph structure.
-"""
+"""Hubs and authorities analysis of graph structure."""
+
 from pip._vendor import networkx as nx
 
 __all__ = ["hits"]

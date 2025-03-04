@@ -1,6 +1,7 @@
 """
 Threshold Graphs - Creation, manipulation and identification.
 """
+
 from math import sqrt
 
 from pip._vendor import networkx as nx

@@ -12,6 +12,7 @@ functions as attributes of ``community``. For example::
     [[0, 1, 2, 3, 4], [5], [6, 7, 8, 9, 10]]
 
 """
+
 from pip._vendor.networkx.algorithms.community.asyn_fluid import *
 from pip._vendor.networkx.algorithms.community.centrality import *
 from pip._vendor.networkx.algorithms.community.divisive import *

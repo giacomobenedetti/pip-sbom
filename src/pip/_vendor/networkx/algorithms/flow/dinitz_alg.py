@@ -1,6 +1,7 @@
 """
 Dinitz' algorithm for maximum flow problems.
 """
+
 from collections import deque
 
 from pip._vendor import networkx as nx

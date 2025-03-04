@@ -1,5 +1,5 @@
-"""Generate graphs with given degree and triangle sequence.
-"""
+"""Generate graphs with given degree and triangle sequence."""
+
 from pip._vendor import networkx as nx
 from pip._vendor.networkx.utils import py_random_state
 

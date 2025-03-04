@@ -3,7 +3,6 @@ A package for reading and writing graphs in various formats.
 
 """
 
-
 from pip._vendor.networkx.readwrite.adjlist import *
 from pip._vendor.networkx.readwrite.multiline_adjlist import *
 from pip._vendor.networkx.readwrite.edgelist import *

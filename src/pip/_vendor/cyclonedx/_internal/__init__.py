@@ -1,3 +1,5 @@
+# This file is part of CycloneDX Python Library
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,3 +20,6 @@
 !!! ALL SYMBOLS IN HERE ARE INTERNAL.
 Everything might change without any notice.
 """
+
+# THIS FILE IS INTENDED TO BE EMPTY.
+# Put symbols in own modules/packages, not in this file!

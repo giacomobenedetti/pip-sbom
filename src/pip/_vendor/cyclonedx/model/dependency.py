@@ -1,4 +1,4 @@
-# This file is part of CycloneDX Python Lib
+# This file is part of CycloneDX Python Library
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,12 +19,11 @@
 from abc import ABC, abstractmethod
 from typing import Any, Iterable, List, Optional, Set
 
-from pip._vendor import serializable
-from pip._vendor.sortedcontainers import SortedSet
+from pip._vendor import py_serializable as serializable
+from sortedcontainers import SortedSet
 
 from .._internal.compare import ComparableTuple as _ComparableTuple
 from ..exception.serialization import SerializationOfUnexpectedValueException
-from ..serialization import BomRefHelper
 from .bom_ref import BomRef
 
 
@@ -53,7 +52,7 @@ class Dependency:
     Models a Dependency within a BOM.
 
     .. note::
-        See https://cyclonedx.org/docs/1.4/xml/#type_dependencyType
+        See https://cyclonedx.org/docs/1.6/xml/#type_dependencyType
     """
 
     def __init__(self, ref: BomRef, dependencies: Optional[Iterable['Dependency']] = None) -> None:
@@ -61,7 +60,7 @@ class Dependency:
         self.dependencies = dependencies or []  # type:ignore[assignment]
 
     @property
-    @serializable.type_mapping(BomRefHelper)
+    @serializable.type_mapping(BomRef)
     @serializable.xml_attribute()
     def ref(self) -> BomRef:
         return self._ref
@@ -84,22 +83,23 @@ class Dependency:
     def dependencies_as_bom_refs(self) -> Set[BomRef]:
         return set(map(lambda d: d.ref, self.dependencies))
 
+    def __comparable_tuple(self) -> _ComparableTuple:
+        return _ComparableTuple((
+            self.ref, _ComparableTuple(self.dependencies)
+        ))
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Dependency):
-            return hash(other) == hash(self)
+            return self.__comparable_tuple() == other.__comparable_tuple()
         return False
 
     def __lt__(self, other: Any) -> bool:
         if isinstance(other, Dependency):
-            return _ComparableTuple((
-                self.ref, _ComparableTuple(self.dependencies)
-            )) < _ComparableTuple((
-                other.ref, _ComparableTuple(other.dependencies)
-            ))
+            return self.__comparable_tuple() < other.__comparable_tuple()
         return NotImplemented
 
     def __hash__(self) -> int:
-        return hash((self.ref, tuple(self.dependencies)))
+        return hash(self.__comparable_tuple())
 
     def __repr__(self) -> str:
         return f'<Dependency ref={self.ref!r}, targets={len(self.dependencies)}>'
@@ -113,4 +113,4 @@ class Dependable(ABC):
     @property
     @abstractmethod
     def bom_ref(self) -> BomRef:
-        ...
+        ...  # pragma: no cover

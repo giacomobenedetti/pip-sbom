@@ -1,4 +1,5 @@
 """Functions for computing large cliques and maximum independent sets."""
+
 from pip._vendor import networkx as nx
 from pip._vendor.networkx.algorithms.approximation import ramsey
 from pip._vendor.networkx.utils import not_implemented_for

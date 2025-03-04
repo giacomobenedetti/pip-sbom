@@ -1,4 +1,5 @@
 """Current-flow betweenness centrality measures for subsets of nodes."""
+
 from pip._vendor import networkx as nx
 from pip._vendor.networkx.algorithms.centrality.flow_matrix import flow_matrix_row
 from pip._vendor.networkx.utils import not_implemented_for, reverse_cuthill_mckee_ordering

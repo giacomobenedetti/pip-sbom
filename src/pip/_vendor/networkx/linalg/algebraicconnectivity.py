@@ -1,6 +1,7 @@
 """
 Algebraic connectivity and Fiedler vectors of undirected graphs.
 """
+
 from functools import partial
 
 from pip._vendor import networkx as nx

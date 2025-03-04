@@ -1,6 +1,7 @@
 """
 Pajek tests
 """
+
 from pip._vendor import networkx as nx
 from pip._vendor.networkx.utils import edges_equal, nodes_equal
 

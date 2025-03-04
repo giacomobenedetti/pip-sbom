@@ -1,4 +1,5 @@
 """Functions for computing sparsifiers of graphs."""
+
 import math
 
 from pip._vendor import networkx as nx

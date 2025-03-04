@@ -1,4 +1,5 @@
 """Degree centrality measures."""
+
 from pip._vendor import networkx as nx
 from pip._vendor.networkx.utils.decorators import not_implemented_for
 

@@ -1,4 +1,5 @@
 """Provides functions for computing minors of a graph."""
+
 from itertools import chain, combinations, permutations, product
 
 from pip._vendor import networkx as nx

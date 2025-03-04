@@ -1,5 +1,5 @@
-"""Test sequences for graphiness.
-"""
+"""Test sequences for graphiness."""
+
 import heapq
 
 from pip._vendor import networkx as nx

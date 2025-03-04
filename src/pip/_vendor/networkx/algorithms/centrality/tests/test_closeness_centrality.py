@@ -1,6 +1,7 @@
 """
 Tests for closeness centrality.
 """
+
 import pytest
 
 from pip._vendor import networkx as nx

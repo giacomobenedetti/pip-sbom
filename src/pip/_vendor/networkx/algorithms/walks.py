@@ -1,5 +1,4 @@
-"""Function for computing walks in a graph.
-"""
+"""Function for computing walks in a graph."""
 
 from pip._vendor import networkx as nx
 

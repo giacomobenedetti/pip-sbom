@@ -11,6 +11,7 @@ For more information, see the `sparse6`_ homepage.
 .. _sparse6: https://users.cecs.anu.edu.au/~bdm/data/formats.html
 
 """
+
 from pip._vendor import networkx as nx
 from pip._vendor.networkx.exception import NetworkXError
 from pip._vendor.networkx.readwrite.graph6 import data_to_n, n_to_data

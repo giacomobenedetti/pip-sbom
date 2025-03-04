@@ -1,4 +1,4 @@
-# This file is part of CycloneDX Python Lib
+# This file is part of CycloneDX Python Library
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,10 +16,20 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 
 
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
+
+from pip._vendor import py_serializable as serializable
+
+from ..exception.serialization import CycloneDxDeserializationException, SerializationOfUnexpectedValueException
+
+if TYPE_CHECKING:  # pragma: no cover
+    from typing import Type, TypeVar
+
+    _T_BR = TypeVar('_T_BR', bound='BomRef')
 
 
-class BomRef:
+@serializable.serializable_class
+class BomRef(serializable.helpers.BaseHelper):
     """
     An identifier that can be used to reference objects elsewhere in the BOM.
 
@@ -33,6 +43,8 @@ class BomRef:
         self.value = value
 
     @property
+    @serializable.json_name('.')
+    @serializable.xml_name('.')
     def value(self) -> Optional[str]:
         return self._value
 
@@ -67,3 +79,23 @@ class BomRef:
 
     def __bool__(self) -> bool:
         return self._value is not None
+
+    # region impl BaseHelper
+
+    @classmethod
+    def serialize(cls, o: Any) -> Optional[str]:
+        if isinstance(o, cls):
+            return o.value
+        raise SerializationOfUnexpectedValueException(
+            f'Attempt to serialize a non-BomRef: {o!r}')
+
+    @classmethod
+    def deserialize(cls: 'Type[_T_BR]', o: Any) -> '_T_BR':
+        try:
+            return cls(value=str(o))
+        except ValueError as err:
+            raise CycloneDxDeserializationException(
+                f'BomRef string supplied does not parse: {o!r}'
+            ) from err
+
+    # endregion impl BaseHelper

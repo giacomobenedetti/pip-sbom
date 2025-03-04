@@ -8,7 +8,7 @@ structure, dynamics, and functions of complex networks.
 See https://networkx.org for complete documentation.
 """
 
-__version__ = "3.3"
+__version__ = "3.4.2"
 
 
 # These are imported in order as listed
@@ -17,7 +17,11 @@ from pip._vendor.networkx.lazy_imports import _lazy_import
 from pip._vendor.networkx.exception import *
 
 from pip._vendor.networkx import utils
-from pip._vendor.networkx.utils import _clear_cache, _dispatchable, config
+from pip._vendor.networkx.utils import _clear_cache, _dispatchable
+
+# load_and_call entry_points, set configs
+config = utils.backends._set_configs_from_environment()
+utils.config = utils.configs.config = config  # type: ignore[attr-defined]
 
 from pip._vendor.networkx import classes
 from pip._vendor.networkx.classes import filters

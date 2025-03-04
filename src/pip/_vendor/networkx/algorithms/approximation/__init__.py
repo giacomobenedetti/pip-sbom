@@ -9,6 +9,7 @@ Another option is to import the specific function with
 ``from networkx.algorithms.approximation import function_name``.
 
 """
+
 from pip._vendor.networkx.algorithms.approximation.clustering_coefficient import *
 from pip._vendor.networkx.algorithms.approximation.clique import *
 from pip._vendor.networkx.algorithms.approximation.connectivity import *

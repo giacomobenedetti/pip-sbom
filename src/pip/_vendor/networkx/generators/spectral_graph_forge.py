@@ -1,6 +1,5 @@
 """Generates graphs with a given eigenvector structure"""
 
-
 from pip._vendor import networkx as nx
 from pip._vendor.networkx.utils import np_random_state
 

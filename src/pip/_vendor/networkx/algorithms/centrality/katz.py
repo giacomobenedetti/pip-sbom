@@ -1,4 +1,5 @@
 """Katz centrality."""
+
 import math
 
 from pip._vendor import networkx as nx

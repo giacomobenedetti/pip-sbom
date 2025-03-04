@@ -1,6 +1,7 @@
 """
 Flow based cut algorithms
 """
+
 import itertools
 
 from pip._vendor import networkx as nx

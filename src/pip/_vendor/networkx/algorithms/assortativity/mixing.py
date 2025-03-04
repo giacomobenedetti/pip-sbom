@@ -1,6 +1,7 @@
 """
 Mixing matrices for node attributes and degree.
 """
+
 from pip._vendor import networkx as nx
 from pip._vendor.networkx.algorithms.assortativity.pairs import node_attribute_xy, node_degree_xy
 from pip._vendor.networkx.utils import dict_to_numpy_array

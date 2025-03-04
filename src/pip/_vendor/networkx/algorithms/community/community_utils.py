@@ -1,4 +1,5 @@
 """Helper functions for community-finding algorithms."""
+
 from pip._vendor import networkx as nx
 
 __all__ = ["is_partition"]

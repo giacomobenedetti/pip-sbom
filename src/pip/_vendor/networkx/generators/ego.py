@@ -1,6 +1,7 @@
 """
 Ego graph.
 """
+
 __all__ = ["ego_graph"]
 
 from pip._vendor import networkx as nx

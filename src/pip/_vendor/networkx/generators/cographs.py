@@ -11,6 +11,7 @@ References
     Discrete Applied Mathematics, Volume 3, Issue 3, 1981, Pages 163-174,
     ISSN 0166-218X.
 """
+
 from pip._vendor import networkx as nx
 from pip._vendor.networkx.utils import py_random_state
 

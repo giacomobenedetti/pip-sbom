@@ -1,3 +1,5 @@
+# This file is part of CycloneDX Python Library
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,13 +18,12 @@
 
 from typing import Any, Iterable, Optional, Union
 
-from pip._vendor import serializable
-from pip._vendor.sortedcontainers import SortedSet
+from pip._vendor import py_serializable as serializable
+from sortedcontainers import SortedSet
 
+from .._internal.bom_ref import bom_ref_from_str as _bom_ref_from_str
 from .._internal.compare import ComparableTuple as _ComparableTuple
-from ..exception.model import NoPropertiesProvidedException
 from ..schema.schema import SchemaVersion1Dot6
-from ..serialization import BomRefHelper
 from . import XsUri
 from .bom_ref import BomRef
 
@@ -47,8 +48,7 @@ class PostalAddress:
         postal_code: Optional[str] = None,
         street_address: Optional[str] = None,
     ) -> None:
-        self._bom_ref = bom_ref if isinstance(bom_ref, BomRef) else BomRef(
-            value=bom_ref) if bom_ref else None
+        self._bom_ref = _bom_ref_from_str(bom_ref, optional=True)
         self.country = country
         self.region = region
         self.locality = locality
@@ -58,15 +58,13 @@ class PostalAddress:
 
     @property
     @serializable.json_name('bom-ref')
-    @serializable.type_mapping(BomRefHelper)
+    @serializable.type_mapping(BomRef)
     @serializable.xml_attribute()
     @serializable.xml_name('bom-ref')
     def bom_ref(self) -> Optional[BomRef]:
         """
         An optional identifier which can be used to reference the component elsewhere in the BOM. Every bom-ref MUST be
         unique within the BOM.
-
-        If a value was not provided in the constructor, a UUIDv4 will have been assigned.
 
         Returns:
             `BomRef`
@@ -163,25 +161,26 @@ class PostalAddress:
     def street_address(self, street_address: Optional[str]) -> None:
         self._street_address = street_address
 
+    def __comparable_tuple(self) -> _ComparableTuple:
+        return _ComparableTuple((
+            self.country, self.region, self.locality, self.postal_code,
+            self.post_office_box_number,
+            self.street_address,
+            None if self.bom_ref is None else self.bom_ref.value,
+        ))
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, PostalAddress):
-            return hash(other) == hash(self)
+            return self.__comparable_tuple() == other.__comparable_tuple()
         return False
 
     def __lt__(self, other: Any) -> bool:
         if isinstance(other, PostalAddress):
-            return _ComparableTuple((
-                self.bom_ref, self.country, self.region, self.locality, self.post_office_box_number, self.postal_code,
-                self.street_address
-            )) < _ComparableTuple((
-                other.bom_ref, other.country, other.region, other.locality, other.post_office_box_number,
-                other.postal_code, other.street_address
-            ))
+            return self.__comparable_tuple() < other.__comparable_tuple()
         return NotImplemented
 
     def __hash__(self) -> int:
-        return hash((self.bom_ref, self.country, self.region, self.locality, self.post_office_box_number,
-                     self.postal_code, self.street_address))
+        return hash(self.__comparable_tuple())
 
     def __repr__(self) -> str:
         return f'<PostalAddress bom-ref={self.bom_ref}, street_address={self.street_address}, country={self.country}>'
@@ -194,7 +193,7 @@ class OrganizationalContact:
     within a CycloneDX BOM document.
 
     .. note::
-        See the CycloneDX Schema definition: https://cyclonedx.org/docs/1.4/xml/#type_organizationalContact
+        See the CycloneDX Schema definition: https://cyclonedx.org/docs/1.6/xml/#type_organizationalContact
     """
 
     def __init__(
@@ -203,10 +202,6 @@ class OrganizationalContact:
         phone: Optional[str] = None,
         email: Optional[str] = None,
     ) -> None:
-        if not name and not phone and not email:
-            raise NoPropertiesProvidedException(
-                'One of name, email or phone must be supplied for an OrganizationalContact - none supplied.'
-            )
         self.name = name
         self.email = email
         self.phone = phone
@@ -259,22 +254,23 @@ class OrganizationalContact:
     def phone(self, phone: Optional[str]) -> None:
         self._phone = phone
 
+    def __comparable_tuple(self) -> _ComparableTuple:
+        return _ComparableTuple((
+            self.name, self.email, self.phone
+        ))
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, OrganizationalContact):
-            return hash(other) == hash(self)
+            return self.__comparable_tuple() == other.__comparable_tuple()
         return False
 
     def __lt__(self, other: Any) -> bool:
         if isinstance(other, OrganizationalContact):
-            return _ComparableTuple((
-                self.name, self.email, self.phone
-            )) < _ComparableTuple((
-                other.name, other.email, other.phone
-            ))
+            return self.__comparable_tuple() < other.__comparable_tuple()
         return NotImplemented
 
     def __hash__(self) -> int:
-        return hash((self.name, self.phone, self.email))
+        return hash(self.__comparable_tuple())
 
     def __repr__(self) -> str:
         return f'<OrganizationalContact name={self.name}, email={self.email}, phone={self.phone}>'
@@ -287,7 +283,7 @@ class OrganizationalEntity:
     within a CycloneDX BOM document.
 
     .. note::
-        See the CycloneDX Schema definition: https://cyclonedx.org/docs/1.4/xml/#type_organizationalEntity
+        See the CycloneDX Schema definition: https://cyclonedx.org/docs/1.6/xml/#type_organizationalEntity
     """
 
     def __init__(
@@ -297,10 +293,6 @@ class OrganizationalEntity:
         contacts: Optional[Iterable[OrganizationalContact]] = None,
         address: Optional[PostalAddress] = None,
     ) -> None:
-        if name is None and not urls and not contacts:
-            raise NoPropertiesProvidedException(
-                'One of name, urls or contacts must be supplied for an OrganizationalEntity - none supplied.'
-            )
         self.name = name
         self.address = address
         self.urls = urls or []  # type:ignore[assignment]
@@ -372,18 +364,23 @@ class OrganizationalEntity:
     def contacts(self, contacts: Iterable[OrganizationalContact]) -> None:
         self._contacts = SortedSet(contacts)
 
+    def __comparable_tuple(self) -> _ComparableTuple:
+        return _ComparableTuple((
+            self.name, _ComparableTuple(self.urls), _ComparableTuple(self.contacts)
+        ))
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, OrganizationalEntity):
-            return hash(other) == hash(self)
+            return self.__comparable_tuple() == other.__comparable_tuple()
         return False
 
     def __lt__(self, other: Any) -> bool:
         if isinstance(other, OrganizationalEntity):
-            return hash(self) < hash(other)
+            return self.__comparable_tuple() < other.__comparable_tuple()
         return NotImplemented
 
     def __hash__(self) -> int:
-        return hash((self.name, tuple(self.urls), tuple(self.contacts)))
+        return hash(self.__comparable_tuple())
 
     def __repr__(self) -> str:
         return f'<OrganizationalEntity name={self.name}>'

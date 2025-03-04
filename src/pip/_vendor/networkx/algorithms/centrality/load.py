@@ -1,4 +1,5 @@
 """Load centrality."""
+
 from operator import itemgetter
 
 from pip._vendor import networkx as nx

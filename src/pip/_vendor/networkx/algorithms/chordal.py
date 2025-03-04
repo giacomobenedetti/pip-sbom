@@ -5,6 +5,7 @@ A graph is chordal if every cycle of length at least 4 has a chord
 (an edge joining two nodes not adjacent in the cycle).
 https://en.wikipedia.org/wiki/Chordal_graph
 """
+
 import sys
 
 from pip._vendor import networkx as nx

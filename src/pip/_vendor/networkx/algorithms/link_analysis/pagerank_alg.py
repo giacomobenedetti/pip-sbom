@@ -1,4 +1,5 @@
-"""PageRank analysis of graph structure. """
+"""PageRank analysis of graph structure."""
+
 from warnings import warn
 
 from pip._vendor import networkx as nx

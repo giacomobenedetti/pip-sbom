@@ -1,6 +1,7 @@
 """
 Communicability.
 """
+
 from pip._vendor import networkx as nx
 from pip._vendor.networkx.utils import not_implemented_for
 

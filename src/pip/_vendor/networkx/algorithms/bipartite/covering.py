@@ -1,4 +1,4 @@
-""" Functions related to graph covers."""
+"""Functions related to graph covers."""
 
 from pip._vendor import networkx as nx
 from pip._vendor.networkx.algorithms.bipartite.matching import hopcroft_karp_matching

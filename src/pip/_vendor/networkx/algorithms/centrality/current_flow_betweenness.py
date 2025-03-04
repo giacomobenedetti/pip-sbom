@@ -1,4 +1,5 @@
 """Current-flow betweenness centrality measures."""
+
 from pip._vendor import networkx as nx
 from pip._vendor.networkx.algorithms.centrality.flow_matrix import (
     CGInverseLaplacian,

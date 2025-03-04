@@ -2,6 +2,7 @@
 A package for generating various graphs in networkx.
 
 """
+
 from pip._vendor.networkx.generators.atlas import *
 from pip._vendor.networkx.generators.classic import *
 from pip._vendor.networkx.generators.cographs import *

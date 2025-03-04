@@ -1,6 +1,7 @@
 """
 Closeness centrality measures.
 """
+
 import functools
 
 from pip._vendor import networkx as nx

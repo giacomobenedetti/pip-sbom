@@ -1,6 +1,7 @@
 """
 Spectral bipartivity measure.
 """
+
 from pip._vendor import networkx as nx
 
 __all__ = ["spectral_bipartivity"]

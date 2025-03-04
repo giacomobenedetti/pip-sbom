@@ -1,5 +1,5 @@
-"""Operations on many graphs.
-"""
+"""Operations on many graphs."""
+
 from itertools import chain, repeat
 
 from pip._vendor import networkx as nx

@@ -1,6 +1,4 @@
-"""Unit tests for the :mod:`networkx.algorithms.community.utils` module.
-
-"""
+"""Unit tests for the :mod:`networkx.algorithms.community.utils` module."""
 
 from pip._vendor import networkx as nx
 

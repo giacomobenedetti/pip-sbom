@@ -1,4 +1,5 @@
 """Functions for computing the Voronoi cells of a graph."""
+
 from pip._vendor import networkx as nx
 from pip._vendor.networkx.utils import groups
 

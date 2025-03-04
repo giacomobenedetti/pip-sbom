@@ -1,4 +1,5 @@
 """Unit tests for the sparsifier computation functions."""
+
 import pytest
 
 from pip._vendor import networkx as nx

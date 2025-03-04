@@ -1,6 +1,7 @@
 """
 Label propagation community detection algorithms.
 """
+
 from collections import Counter, defaultdict, deque
 
 from pip._vendor import networkx as nx

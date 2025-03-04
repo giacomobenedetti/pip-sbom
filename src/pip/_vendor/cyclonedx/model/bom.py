@@ -1,4 +1,4 @@
-# This file is part of CycloneDX Python Lib
+# This file is part of CycloneDX Python Library
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,9 +22,10 @@ from typing import TYPE_CHECKING, Generator, Iterable, Optional, Union
 from uuid import UUID, uuid4
 from warnings import warn
 
-from pip._vendor import serializable
-from pip._vendor.sortedcontainers import SortedSet
+from pip._vendor import py_serializable as serializable
+from sortedcontainers import SortedSet
 
+from .._internal.compare import ComparableTuple as _ComparableTuple
 from .._internal.time import get_now_utc as _get_now_utc
 from ..exception.model import LicenseExpressionAlongWithOthersException, UnknownComponentDependencyException
 from ..schema.schema import (
@@ -36,18 +37,21 @@ from ..schema.schema import (
     SchemaVersion1Dot5,
     SchemaVersion1Dot6,
 )
-from ..serialization import LicenseRepositoryHelper, UrnUuidHelper
-from . import ExternalReference, Property, ThisTool, Tool
+from ..serialization import UrnUuidHelper
+from . import _BOM_LINK_PREFIX, ExternalReference, Property
 from .bom_ref import BomRef
 from .component import Component
 from .contact import OrganizationalContact, OrganizationalEntity
+from .definition import Definitions
 from .dependency import Dependable, Dependency
-from .license import License, LicenseExpression, LicenseRepository
+from .license import License, LicenseExpression, LicenseRepository, _LicenseRepositorySerializationHelper
+from .lifecycle import Lifecycle, LifecycleRepository, _LifecycleRepositoryHelper
 from .service import Service
+from .tool import Tool, ToolRepository, _ToolRepositoryHelper
 from .vulnerability import Vulnerability
 
 if TYPE_CHECKING:  # pragma: no cover
-    from packageurl import PackageURL
+    from pip._vendor.packageurl import PackageURL
 
 
 @serializable.serializable_class
@@ -56,12 +60,12 @@ class BomMetaData:
     This is our internal representation of the metadata complex type within the CycloneDX standard.
 
     .. note::
-        See the CycloneDX Schema for Bom metadata: https://cyclonedx.org/docs/1.5/#type_metadata
+        See the CycloneDX Schema for Bom metadata: https://cyclonedx.org/docs/1.6/#type_metadata
     """
 
     def __init__(
         self, *,
-        tools: Optional[Iterable[Tool]] = None,
+        tools: Optional[Union[Iterable[Tool], ToolRepository]] = None,
         authors: Optional[Iterable[OrganizationalContact]] = None,
         component: Optional[Component] = None,
         supplier: Optional[OrganizationalEntity] = None,
@@ -69,6 +73,7 @@ class BomMetaData:
         properties: Optional[Iterable[Property]] = None,
         timestamp: Optional[datetime] = None,
         manufacturer: Optional[OrganizationalEntity] = None,
+        lifecycles: Optional[Iterable[Lifecycle]] = None,
         # Deprecated as of v1.6
         manufacture: Optional[OrganizationalEntity] = None,
     ) -> None:
@@ -80,6 +85,7 @@ class BomMetaData:
         self.licenses = licenses or []  # type:ignore[assignment]
         self.properties = properties or []  # type:ignore[assignment]
         self.manufacturer = manufacturer
+        self.lifecycles = lifecycles or []  # type:ignore[assignment]
 
         self.manufacture = manufacture
         if manufacture:
@@ -87,9 +93,6 @@ class BomMetaData:
                 '`bom.metadata.manufacture` is deprecated from CycloneDX v1.6 onwards. '
                 'Please use `bom.metadata.component.manufacturer` instead.',
                 DeprecationWarning)
-
-        if not tools:
-            self.tools.add(ThisTool)
 
     @property
     @serializable.type_mapping(serializable.helpers.XsdDateTime)
@@ -107,34 +110,41 @@ class BomMetaData:
     def timestamp(self, timestamp: datetime) -> None:
         self._timestamp = timestamp
 
-    # @property
-    # ...
-    # @serializable.view(SchemaVersion1Dot5)
-    # @serializable.xml_sequence(2)
-    # def lifecycles(self) -> ...:
-    #    ... # TODO since CDX1.5
-    #
-    # @lifecycles.setter
-    # def lifecycles(self, ...) -> None:
-    #    ... # TODO since CDX1.5
+    @property
+    @serializable.view(SchemaVersion1Dot5)
+    @serializable.view(SchemaVersion1Dot6)
+    @serializable.type_mapping(_LifecycleRepositoryHelper)
+    @serializable.xml_sequence(2)
+    def lifecycles(self) -> LifecycleRepository:
+        """
+        An optional list of BOM lifecycle stages.
+
+        Returns:
+            Set of `Lifecycle`
+        """
+        return self._lifecycles
+
+    @lifecycles.setter
+    def lifecycles(self, lifecycles: Iterable[Lifecycle]) -> None:
+        self._lifecycles = LifecycleRepository(lifecycles)
 
     @property
-    @serializable.xml_array(serializable.XmlArraySerializationType.NESTED, 'tool')
+    @serializable.type_mapping(_ToolRepositoryHelper)
     @serializable.xml_sequence(3)
-    def tools(self) -> 'SortedSet[Tool]':
+    def tools(self) -> ToolRepository:
         """
         Tools used to create this BOM.
 
         Returns:
-            `Set` of `Tool` objects.
+            :class:`ToolRepository` object.
         """
-        # TODO since CDX1.5 also supports `Component` and `Services`, not only `Tool`
         return self._tools
 
     @tools.setter
-    def tools(self, tools: Iterable[Tool]) -> None:
-        # TODO since CDX1.5 also supports `Component` and `Services`, not only `Tool`
-        self._tools = SortedSet(tools)
+    def tools(self, tools: Union[Iterable[Tool], ToolRepository]) -> None:
+        self._tools = tools \
+            if isinstance(tools, ToolRepository) \
+            else ToolRepository(tools=tools)
 
     @property
     @serializable.xml_array(serializable.XmlArraySerializationType.NESTED, 'author')
@@ -245,7 +255,7 @@ class BomMetaData:
     @serializable.view(SchemaVersion1Dot4)
     @serializable.view(SchemaVersion1Dot5)
     @serializable.view(SchemaVersion1Dot6)
-    @serializable.type_mapping(LicenseRepositoryHelper)
+    @serializable.type_mapping(_LicenseRepositorySerializationHelper)
     @serializable.xml_sequence(9)
     def licenses(self) -> LicenseRepository:
         """
@@ -284,16 +294,20 @@ class BomMetaData:
     def properties(self, properties: Iterable[Property]) -> None:
         self._properties = SortedSet(properties)
 
+    def __comparable_tuple(self) -> _ComparableTuple:
+        return _ComparableTuple((
+            _ComparableTuple(self.authors), self.component, _ComparableTuple(self.licenses), self.manufacture,
+            _ComparableTuple(self.properties),
+            _ComparableTuple(self.lifecycles), self.supplier, self.timestamp, self.tools, self.manufacturer
+        ))
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, BomMetaData):
-            return hash(other) == hash(self)
+            return self.__comparable_tuple() == other.__comparable_tuple()
         return False
 
     def __hash__(self) -> int:
-        return hash((
-            tuple(self.authors), self.component, tuple(self.licenses), self.manufacture, tuple(self.properties),
-            self.supplier, self.timestamp, tuple(self.tools), self.manufacturer,
-        ))
+        return hash(self.__comparable_tuple())
 
     def __repr__(self) -> str:
         return f'<BomMetaData timestamp={self.timestamp}, component={self.component}>'
@@ -319,6 +333,7 @@ class Bom:
         dependencies: Optional[Iterable[Dependency]] = None,
         vulnerabilities: Optional[Iterable[Vulnerability]] = None,
         properties: Optional[Iterable[Property]] = None,
+        definitions: Optional[Definitions] = None,
     ) -> None:
         """
         Create a new Bom that you can manually/programmatically add data to later.
@@ -335,6 +350,7 @@ class Bom:
         self.vulnerabilities = vulnerabilities or []  # type:ignore[assignment]
         self.dependencies = dependencies or []  # type:ignore[assignment]
         self.properties = properties or []  # type:ignore[assignment]
+        self.definitions = definitions or Definitions()
 
     @property
     @serializable.type_mapping(UrnUuidHelper)
@@ -383,7 +399,7 @@ class Bom:
             Metadata object instance for this Bom.
 
         .. note::
-            See the CycloneDX Schema for Bom metadata: https://cyclonedx.org/docs/1.3/#type_metadata
+            See the CycloneDX Schema for Bom metadata: https://cyclonedx.org/docs/1.6/#type_metadata
         """
         return self._metadata
 
@@ -544,6 +560,22 @@ class Bom:
     # def formulation(self, ...) -> None:
     #     ...  # TODO Since CDX 1.5
 
+    @property
+    @serializable.view(SchemaVersion1Dot6)
+    @serializable.xml_sequence(110)
+    def definitions(self) -> Optional[Definitions]:
+        """
+        The repository for definitions
+
+        Returns:
+            `Definitions`
+        """
+        return self._definitions if len(self._definitions.standards) > 0 else None
+
+    @definitions.setter
+    def definitions(self, definitions: Definitions) -> None:
+        self._definitions = definitions
+
     def get_component_by_purl(self, purl: Optional['PackageURL']) -> Optional[Component]:
         """
         Get a Component already in the Bom by its PURL
@@ -636,7 +668,7 @@ class Bom:
                 self.register_dependency(target=_d2, depends_on=None)
 
     def urn(self) -> str:
-        return f'urn:cdx:{self.serial_number}/{self.version}'
+        return f'{_BOM_LINK_PREFIX}{self.serial_number}/{self.version}'
 
     def validate(self) -> bool:
         """
@@ -667,8 +699,9 @@ class Bom:
                 'One or more Components have Dependency references to Components/Services that are not known in this '
                 f'BOM. They are: {dependency_diff}')
 
-        # 2. if root component is set: dependencies should exist for the Component this BOM is describing
-        if self.metadata.component and not any(map(
+        # 2. if root component is set and there are other components: dependencies should exist for the Component
+        # this BOM is describing
+        if self.metadata.component and len(self.components) > 0 and not any(map(
             lambda d: d.ref == self.metadata.component.bom_ref and len(d.dependencies) > 0,  # type: ignore[union-attr]
             self.dependencies
         )):
@@ -694,17 +727,22 @@ class Bom:
 
         return True
 
+    def __comparable_tuple(self) -> _ComparableTuple:
+        return _ComparableTuple((
+            self.serial_number, self.version, self.metadata, _ComparableTuple(
+                self.components), _ComparableTuple(self.services),
+            _ComparableTuple(self.external_references), _ComparableTuple(
+                self.dependencies), _ComparableTuple(self.properties),
+            _ComparableTuple(self.vulnerabilities),
+        ))
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Bom):
-            return hash(other) == hash(self)
+            return self.__comparable_tuple() == other.__comparable_tuple()
         return False
 
     def __hash__(self) -> int:
-        return hash((
-            self.serial_number, self.version, self.metadata, tuple(self.components), tuple(self.services),
-            tuple(self.external_references), tuple(self.dependencies), tuple(self.properties),
-            tuple(self.vulnerabilities),
-        ))
+        return hash(self.__comparable_tuple())
 
     def __repr__(self) -> str:
         return f'<Bom uuid={self.serial_number}, hash={hash(self)}>'

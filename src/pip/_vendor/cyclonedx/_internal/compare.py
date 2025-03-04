@@ -1,3 +1,5 @@
+# This file is part of CycloneDX Python Library
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -23,7 +25,7 @@ from itertools import zip_longest
 from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
 if TYPE_CHECKING:  # pragma: no cover
-    from packageurl import PackageURL
+    from pip._vendor.packageurl import PackageURL
 
 
 class ComparableTuple(Tuple[Optional[Any], ...]):
@@ -40,7 +42,7 @@ class ComparableTuple(Tuple[Optional[Any], ...]):
                 return False
             if o is None:
                 return True
-            return True if s < o else False
+            return bool(s < o)
         return False
 
     def __gt__(self, other: Any) -> bool:
@@ -52,31 +54,17 @@ class ComparableTuple(Tuple[Optional[Any], ...]):
                 return True
             if o is None:
                 return False
-            return True if s > o else False
+            return bool(s > o)
         return False
 
 
-class ComparableDict:
+class ComparableDict(ComparableTuple):
     """
     Allows comparison of dictionaries, allowing for missing/None values.
     """
 
-    def __init__(self, dict_: Dict[Any, Any]) -> None:
-        self._dict = dict_
-
-    def __lt__(self, other: Any) -> bool:
-        if not isinstance(other, ComparableDict):
-            return True
-        keys = sorted(self._dict.keys() | other._dict.keys())
-        return ComparableTuple(self._dict.get(k) for k in keys) \
-            < ComparableTuple(other._dict.get(k) for k in keys)
-
-    def __gt__(self, other: Any) -> bool:
-        if not isinstance(other, ComparableDict):
-            return False
-        keys = sorted(self._dict.keys() | other._dict.keys())
-        return ComparableTuple(self._dict.get(k) for k in keys) \
-            > ComparableTuple(other._dict.get(k) for k in keys)
+    def __new__(cls, d: Dict[Any, Any]) -> 'ComparableDict':
+        return super(ComparableDict, cls).__new__(cls, sorted(d.items()))
 
 
 class ComparablePackageURL(ComparableTuple):
@@ -84,12 +72,11 @@ class ComparablePackageURL(ComparableTuple):
     Allows comparison of PackageURL, allowing for qualifiers.
     """
 
-    def __new__(cls, purl: 'PackageURL') -> 'ComparablePackageURL':
-        return super().__new__(
-            ComparablePackageURL, (
-                purl.type,
-                purl.namespace,
-                purl.version,
-                ComparableDict(purl.qualifiers) if isinstance(purl.qualifiers, dict) else purl.qualifiers,
-                purl.subpath
-            ))
+    def __new__(cls, p: 'PackageURL') -> 'ComparablePackageURL':
+        return super(ComparablePackageURL, cls).__new__(cls, (
+            p.type,
+            p.namespace,
+            p.version,
+            ComparableDict(p.qualifiers) if isinstance(p.qualifiers, dict) else p.qualifiers,
+            p.subpath
+        ))
