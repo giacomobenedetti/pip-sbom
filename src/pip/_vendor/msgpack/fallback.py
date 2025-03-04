@@ -631,7 +631,7 @@ class Packer:
 
     :param bool strict_types:
         If set to true, types will be checked to be exact. Derived classes
-        from serializable types will not be serialized and will be
+        from pip._vendor.serializable types will not be serialized and will be
         treated as unsupported type and forwarded to default.
         Additionally tuples will not be serialized as lists.
         This is useful when trying to implement accurate serialization

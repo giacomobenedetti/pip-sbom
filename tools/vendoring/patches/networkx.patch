@@ -1,0 +1,13 @@
+diff --git a/src/pip/_vendor/networkx/generators/atlas.py b/src/pip/_vendor/networkx/generators/atlas.py
+index 07af16d80..0e1194217 100644
+--- a/src/pip/_vendor/networkx/generators/atlas.py
++++ b/src/pip/_vendor/networkx/generators/atlas.py
+@@ -51,7 +51,7 @@ NUM_GRAPHS = 1253
+ #:
+ 
+ # Path to the atlas file
+-ATLAS_FILE = importlib.resources.files("networkx.generators") / "atlas.dat.gz"
++ATLAS_FILE = importlib.resources.files("pip._vendor.networkx.generators") / "atlas.dat.gz"
+ 
+ 
+ def _generate_graphs():

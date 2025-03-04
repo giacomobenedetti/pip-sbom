@@ -115,3 +115,5 @@ if DEBUNDLED:
         vendored("tomli")
     vendored("truststore")
     vendored("urllib3")
+    vendored("networkx")
+    vendored("cyclonedx")

@@ -103,6 +103,11 @@ commands_dict: Dict[str, CommandInfo] = {
         "HelpCommand",
         "Show help for commands.",
     ),
+    "sbom": CommandInfo(
+        "pip._internal.commands.sbom",
+        "SbomCommand",
+        "Generate SBOM.",
+    ),
 }
 
 
