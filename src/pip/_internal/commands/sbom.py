@@ -165,7 +165,7 @@ class SbomCommand(RequirementCommand):
         from pip._vendor.cyclonedx.output import BaseOutput
         from pip._vendor.cyclonedx.schema import SchemaVersion, OutputFormat
         from pip._vendor.cyclonedx.output.json import JsonV1Dot5
-        import packageurl
+        import pip._vendor.packageurl as packageurl
 
         bom = Bom()
         print(graph.nodes)
