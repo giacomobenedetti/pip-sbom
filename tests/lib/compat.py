@@ -2,13 +2,14 @@
 
 import contextlib
 import signal
-from typing import Callable, ContextManager, Iterator
+from collections.abc import Callable, Iterator
+from contextlib import AbstractContextManager
 
 # Applies on Windows.
 if not hasattr(signal, "pthread_sigmask"):
     # We're not relying on this behavior anywhere currently, it's just best
     # practice.
-    blocked_signals: Callable[[], ContextManager[None]] = contextlib.nullcontext
+    blocked_signals: Callable[[], AbstractContextManager[None]] = contextlib.nullcontext
 else:
 
     @contextlib.contextmanager

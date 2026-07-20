@@ -2,6 +2,7 @@ import base64
 import csv
 import hashlib
 import os
+import platform
 import shutil
 import sysconfig
 from pathlib import Path
@@ -38,7 +39,7 @@ def test_install_from_future_wheel_version(
 
     result = script.pip("install", package, "--no-index", expect_error=True)
     with pytest.raises(TestFailure):
-        result.assert_installed("futurewheel", without_egg_link=True, editable=False)
+        result.assert_installed("futurewheel", editable=False)
 
     package = make_wheel_with_file(
         name="futurewheel",
@@ -46,7 +47,7 @@ def test_install_from_future_wheel_version(
         wheel_metadata_updates={"Wheel-Version": "1.9"},
     ).save_to_dir(tmpdir)
     result = script.pip("install", package, "--no-index", expect_stderr=True)
-    result.assert_installed("futurewheel", without_egg_link=True, editable=False)
+    result.assert_installed("futurewheel", editable=False)
 
 
 @pytest.mark.parametrize(
@@ -67,7 +68,7 @@ def test_install_from_broken_wheel(
     package = data.packages.joinpath(wheel_name)
     result = script.pip("install", package, "--no-index", expect_error=True)
     with pytest.raises(TestFailure):
-        result.assert_installed("futurewheel", without_egg_link=True, editable=False)
+        result.assert_installed("futurewheel", editable=False)
 
 
 def test_basic_install_from_wheel(
@@ -190,7 +191,7 @@ def test_install_from_wheel_with_headers(script: PipTestEnvironment) -> None:
     dist_info_folder = script.site_packages / "headers.dist-0.1.dist-info"
     result.did_create(dist_info_folder)
 
-    header_scheme_path = get_header_scheme_path_for_script(script, "headers.dist")
+    header_scheme_path = get_header_scheme_path_for_script(script, "headers-dist")
     header_path = header_scheme_path / "header.h"
     assert header_path.read_text() == header_text
 
@@ -299,6 +300,7 @@ def test_install_from_wheel_installs_deps(
     shutil.copy(data.packages / "source-1.0.tar.gz", tmpdir)
     result = script.pip(
         "install",
+        "--no-build-isolation",
         "--no-index",
         "--find-links",
         tmpdir,
@@ -524,6 +526,9 @@ def test_install_from_wheel_with_legacy(
 
     result.did_create(legacy_file1)
     result.did_create(legacy_file2)
+    if platform.system() in ("Linux", "Darwin"):
+        unix_script = script.bin_path / "testscript2"
+        assert unix_script.stat().st_mode & 0o111, "executable bit wasn't preserved"
 
 
 def test_install_from_wheel_no_setuptools_entrypoint(
@@ -746,11 +751,8 @@ def test_wheel_installs_ok_with_badly_encoded_irrelevant_dist_info_file(
 def test_wheel_install_fails_with_badly_encoded_metadata(
     script: PipTestEnvironment,
 ) -> None:
-    package = create_basic_wheel_for_package(
-        script,
-        "simple",
-        "0.1.0",
-        extra_files={"simple-0.1.0.dist-info/METADATA": b"\xff"},
+    package = make_wheel("simple", "0.1.0", metadata=b"\xff").save_to_dir(
+        script.scratch_path
     )
     result = script.pip(
         "install", "--no-cache-dir", "--no-index", package, expect_error=True

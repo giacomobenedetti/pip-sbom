@@ -35,6 +35,7 @@ def test_extras_after_wheel(script: PipTestEnvironment, data: TestData) -> None:
 
     no_extra = script.pip(
         "install",
+        "--no-build-isolation",
         "--no-index",
         "-f",
         data.find_links,
@@ -45,6 +46,7 @@ def test_extras_after_wheel(script: PipTestEnvironment, data: TestData) -> None:
 
     extra = script.pip(
         "install",
+        "--no-build-isolation",
         "--no-index",
         "-f",
         data.find_links,
@@ -84,6 +86,7 @@ def test_nonexistent_extra_warns_user_no_wheel(
     result = script.pip(
         "install",
         "--no-binary=:all:",
+        "--no-build-isolation",
         "--no-index",
         "--find-links=" + data.find_links,
         "simple[nonexistent]",
@@ -188,10 +191,11 @@ def test_install_special_extra(
     ) in result.stderr, str(result)
 
 
+@pytest.mark.network
 def test_install_requirements_no_r_flag(script: PipTestEnvironment) -> None:
     """Beginners sometimes forget the -r and this leads to confusion"""
     result = script.pip("install", "requirements.txt", expect_error=True)
-    assert 'literally named "requirements.txt"' in result.stdout
+    assert 'literally named "requirements.txt"' in result.stdout, str(result)
 
 
 @pytest.mark.parametrize(
@@ -214,9 +218,7 @@ def test_install_extra_merging(
     # Check that extra specifications in the extras section are honoured.
     pkga_path = script.scratch_path / "pkga"
     pkga_path.mkdir()
-    pkga_path.joinpath("setup.py").write_text(
-        textwrap.dedent(
-            """
+    pkga_path.joinpath("setup.py").write_text(textwrap.dedent("""
         from setuptools import setup
         setup(name='pkga',
               version='0.1',
@@ -224,9 +226,7 @@ def test_install_extra_merging(
               extras_require={'extra1': ['simple<3'],
                               'extra2': ['simple==1.*']},
         )
-    """
-        )
-    )
+    """))
 
     result = script.pip_install_local(
         f"{pkga_path}{extra_to_install}",
@@ -255,21 +255,54 @@ def test_install_extras(script: PipTestEnvironment) -> None:
     script.assert_installed(a="1", b="1", dep="1", meh="1")
 
 
+@pytest.mark.parametrize(
+    "all_extra",
+    [
+        ["pkg[a]", "pkg[b]"],
+        ["pkg[a, b]"],
+    ],
+    ids=["separate-specifiers", "combined-specifier"],
+)
+def test_install_self_referential_extras(
+    script: PipTestEnvironment,
+    all_extra: list[str],
+) -> None:
+    """A package extra can depend on the same package with a different extra."""
+    create_basic_wheel_for_package(script, "dep_a", "1")
+    create_basic_wheel_for_package(script, "dep_b", "1")
+    create_basic_wheel_for_package(
+        script,
+        "pkg",
+        "1",
+        extras={
+            "a": ["dep_a"],
+            "b": ["dep_b"],
+            "all": all_extra,
+        },
+    )
+
+    script.pip(
+        "install",
+        "--no-cache-dir",
+        "--no-index",
+        "--find-links",
+        script.scratch_path,
+        "pkg[all]",
+    )
+    script.assert_installed(pkg="1", dep_a="1", dep_b="1")
+
+
 def test_install_setuptools_extras_inconsistency(
     script: PipTestEnvironment, tmp_path: Path
 ) -> None:
     test_project_path = tmp_path.joinpath("test")
     test_project_path.mkdir()
-    test_project_path.joinpath("setup.py").write_text(
-        textwrap.dedent(
-            """
+    test_project_path.joinpath("setup.py").write_text(textwrap.dedent("""
                 from setuptools import setup
                 setup(
                     name='test',
                     version='0.1',
                     extras_require={'extra_underscored': ['packaging']},
                 )
-            """
-        )
-    )
-    script.pip("install", "--dry-run", test_project_path)
+            """))
+    script.pip("install", "--no-build-isolation", "--dry-run", test_project_path)

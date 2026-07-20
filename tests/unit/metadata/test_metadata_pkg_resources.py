@@ -1,6 +1,6 @@
 import email.message
 import itertools
-from typing import List, cast
+from typing import cast
 from unittest import mock
 
 import pytest
@@ -34,7 +34,7 @@ def patch_distribution_lookups(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(Distribution, "in_usersite", property(_dist_in_usersite))
 
 
-class _MockWorkingSet(List[mock.Mock]):
+class _MockWorkingSet(list[mock.Mock]):
     def require(self, name: str) -> None:
         pass
 
@@ -58,16 +58,16 @@ workingset_stdlib = _MockWorkingSet(
 
 @pytest.mark.parametrize(
     "ws, req_name",
-    itertools.chain(
-        itertools.product(
+    [
+        *itertools.product(
             [workingset],
             (d.project_name for d in workingset),
         ),
-        itertools.product(
+        *itertools.product(
             [workingset_stdlib],
             (d.project_name for d in workingset_stdlib),
         ),
-    ),
+    ],
 )
 def test_get_distribution(ws: _MockWorkingSet, req_name: str) -> None:
     """Ensure get_distribution() finds all kinds of distributions."""

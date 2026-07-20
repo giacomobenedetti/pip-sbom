@@ -3,15 +3,18 @@ util tests
 
 """
 
+from __future__ import annotations
+
 import os
 import shutil
 import stat
 import sys
 import time
+from collections.abc import Callable, Iterator
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Callable, Iterator, List, NoReturn, Optional, Tuple, Type
-from unittest.mock import Mock
+from typing import Any, NoReturn
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -30,6 +33,7 @@ from pip._internal.utils.misc import (
     HiddenText,
     build_netloc,
     build_url_from_netloc,
+    display_path,
     format_size,
     get_prog,
     hide_url,
@@ -48,7 +52,6 @@ from pip._internal.utils.misc import (
     split_auth_netloc_from_url,
     tabulate,
 )
-from pip._internal.utils.setuptools_build import make_setuptools_shim_args
 
 
 class Tests_EgglinkPath:
@@ -318,6 +321,39 @@ elif sys.byteorder == "big":
     )
 
 
+class Test_display_path:
+    on_unix = pytest.mark.skipif("sys.platform == 'win32'")
+    on_win32 = pytest.mark.skipif("sys.platform != 'win32'")
+
+    @pytest.mark.parametrize(
+        "path, fake_cwd, expected",
+        [
+            pytest.param(
+                *("/home/name/project", Path("/home/name"), "./project"),
+                marks=on_unix,
+            ),
+            pytest.param(
+                *("/home", Path("/home/name"), "/home"),
+                marks=on_unix,
+                id="not-go-up",
+            ),
+            pytest.param(
+                *("C:\\Name\\Project", Path("C:\\Name"), ".\\Project"),
+                marks=on_win32,
+            ),
+            pytest.param(
+                *("D:\\Data", Path("C:\\Name"), "D:\\Data"),
+                marks=on_win32,
+            ),
+        ],
+    )
+    def test_display(self, path: str, fake_cwd: Path, expected: str) -> None:
+        with patch("pathlib.Path.cwd") as cwd_func:
+            cwd_func.return_value = fake_cwd
+            got = display_path(path)
+            assert got == expected
+
+
 class Test_normalize_path:
     # Technically, symlinks are possible on Windows, but you need a special
     # permission bit to create them, and Python 2 doesn't support it anyway, so
@@ -443,7 +479,7 @@ class TestHashes:
         assert not empty_hashes.has_one_of({"sha256": "xyzt"})
 
 
-def raises(error: Type[Exception]) -> NoReturn:
+def raises(error: type[Exception]) -> NoReturn:
     raise error
 
 
@@ -508,7 +544,7 @@ class TestGlibc:
     ],
 )
 def test_normalize_version_info(
-    version_info: Tuple[int, ...], expected: Tuple[int, int, int]
+    version_info: tuple[int, ...], expected: tuple[int, int, int]
 ) -> None:
     actual = normalize_version_info(version_info)
     assert actual == expected
@@ -547,9 +583,7 @@ class TestGetProg:
         (("2001:db6::1", 5000), "[2001:db6::1]:5000"),
     ],
 )
-def test_build_netloc(
-    host_port: Tuple[str, Optional[int]], expected_netloc: str
-) -> None:
+def test_build_netloc(host_port: tuple[str, int | None], expected_netloc: str) -> None:
     assert build_netloc(*host_port) == expected_netloc
 
 
@@ -577,7 +611,7 @@ def test_build_netloc(
 def test_build_url_from_netloc_and_parse_netloc(
     netloc: str,
     expected_url: str,
-    expected_host_port: Tuple[str, Optional[int]],
+    expected_host_port: tuple[str, int | None],
 ) -> None:
     assert build_url_from_netloc(netloc) == expected_url
     assert parse_netloc(netloc) == expected_host_port
@@ -603,7 +637,7 @@ def test_build_url_from_netloc_and_parse_netloc(
     ],
 )
 def test_split_auth_from_netloc(
-    netloc: str, expected: Tuple[str, Tuple[Optional[str], Optional[str]]]
+    netloc: str, expected: tuple[str, tuple[str | None, str | None]]
 ) -> None:
     actual = split_auth_from_netloc(netloc)
     assert actual == expected
@@ -650,7 +684,7 @@ def test_split_auth_from_netloc(
     ],
 )
 def test_split_auth_netloc_from_url(
-    url: str, expected: Tuple[str, str, Tuple[Optional[str], Optional[str]]]
+    url: str, expected: tuple[str, str, tuple[str | None, str | None]]
 ) -> None:
     actual = split_auth_netloc_from_url(url)
     assert actual == expected
@@ -735,15 +769,15 @@ def test_redact_auth_from_url(auth_url: str, expected_url: str) -> None:
         (
             "resolvelib@ "
             " git+https://test-user:test-pass@github.com/sarugaku/resolvelib@1.0.1",
-            "resolvelib@"
-            " git+https://test-user:****@github.com/sarugaku/resolvelib@1.0.1",
+            "resolvelib @ "
+            "git+https://test-user:****@github.com/sarugaku/resolvelib@1.0.1",
         ),
         (
             "resolvelib@"
             " git+https://test-user:test-pass@github.com/sarugaku/resolvelib@1.0.1"
             " ; python_version>='3.6'",
-            "resolvelib@"
-            " git+https://test-user:****@github.com/sarugaku/resolvelib@1.0.1"
+            "resolvelib @ "
+            "git+https://test-user:****@github.com/sarugaku/resolvelib@1.0.1"
             ' ; python_version >= "3.6"',
         ),
     ],
@@ -834,10 +868,10 @@ def patch_deprecation_check_version() -> Iterator[None]:
 @pytest.mark.parametrize("issue", [None, 988])
 @pytest.mark.parametrize("feature_flag", [None, "magic-8-ball"])
 def test_deprecated_message_contains_information(
-    gone_in: Optional[str],
-    replacement: Optional[str],
-    issue: Optional[int],
-    feature_flag: Optional[str],
+    gone_in: str | None,
+    replacement: str | None,
+    issue: int | None,
+    feature_flag: str | None,
 ) -> None:
     with pytest.warns(PipDeprecationWarning) as record:
         deprecated(
@@ -864,7 +898,7 @@ def test_deprecated_message_contains_information(
 @pytest.mark.parametrize("issue", [None, 988])
 @pytest.mark.parametrize("feature_flag", [None, "magic-8-ball"])
 def test_deprecated_raises_error_if_too_old(
-    replacement: Optional[str], issue: Optional[int], feature_flag: Optional[str]
+    replacement: str | None, issue: int | None, feature_flag: str | None
 ) -> None:
     with pytest.raises(PipDeprecationWarning) as exception:
         deprecated(
@@ -931,59 +965,6 @@ def test_deprecated_message_reads_well_future() -> None:
     )
 
 
-def test_make_setuptools_shim_args() -> None:
-    # Test all arguments at once, including the overall ordering.
-    args = make_setuptools_shim_args(
-        "/dir/path/setup.py",
-        global_options=["--some", "--option"],
-        no_user_config=True,
-        unbuffered_output=True,
-    )
-
-    assert args[1:3] == ["-u", "-c"]
-    assert args[4:] == ["--some", "--option", "--no-user-cfg"]
-
-    shim = args[3]
-    # Spot-check key aspects of the command string.
-    assert "import setuptools" in shim
-    assert "'/dir/path/setup.py'" in args[3]
-    assert "sys.argv[0] = __file__" in args[3]
-
-
-@pytest.mark.parametrize("global_options", [None, [], ["--some", "--option"]])
-def test_make_setuptools_shim_args__global_options(
-    global_options: Optional[List[str]],
-) -> None:
-    args = make_setuptools_shim_args(
-        "/dir/path/setup.py",
-        global_options=global_options,
-    )
-
-    if global_options:
-        assert len(args) == 5
-        for option in global_options:
-            assert option in args
-    else:
-        assert len(args) == 3
-
-
-@pytest.mark.parametrize("no_user_config", [False, True])
-def test_make_setuptools_shim_args__no_user_config(no_user_config: bool) -> None:
-    args = make_setuptools_shim_args(
-        "/dir/path/setup.py",
-        no_user_config=no_user_config,
-    )
-    assert ("--no-user-cfg" in args) == no_user_config
-
-
-@pytest.mark.parametrize("unbuffered_output", [False, True])
-def test_make_setuptools_shim_args__unbuffered_output(unbuffered_output: bool) -> None:
-    args = make_setuptools_shim_args(
-        "/dir/path/setup.py", unbuffered_output=unbuffered_output
-    )
-    assert ("-u" in args) == unbuffered_output
-
-
 @pytest.mark.parametrize(
     "isatty,no_stdin,expected",
     [
@@ -1041,5 +1022,5 @@ def test_format_size(size: int, expected: str) -> None:
         ),
     ],
 )
-def test_tabulate(rows: List[Tuple[str]], table: List[str], sizes: List[int]) -> None:
+def test_tabulate(rows: list[tuple[str]], table: list[str], sizes: list[int]) -> None:
     assert tabulate(rows) == (table, sizes)
