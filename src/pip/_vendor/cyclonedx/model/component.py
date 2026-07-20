@@ -24,7 +24,7 @@ from warnings import warn
 # See https://github.com/package-url/packageurl-python/issues/65
 from pip._vendor import py_serializable as serializable
 from pip._vendor.packageurl import PackageURL
-from sortedcontainers import SortedSet
+from pip._vendor.sortedcontainers import SortedSet
 
 from .._internal.bom_ref import bom_ref_from_str as _bom_ref_from_str
 from .._internal.compare import ComparablePackageURL as _ComparablePackageURL, ComparableTuple as _ComparableTuple

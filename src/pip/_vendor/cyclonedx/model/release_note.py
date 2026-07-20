@@ -19,7 +19,7 @@ from datetime import datetime
 from typing import Iterable, Optional
 
 from pip._vendor import py_serializable as serializable
-from sortedcontainers import SortedSet
+from pip._vendor.sortedcontainers import SortedSet
 
 from .._internal.compare import ComparableTuple as _ComparableTuple
 from ..model import Note, Property, XsUri

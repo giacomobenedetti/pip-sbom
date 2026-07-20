@@ -34,7 +34,7 @@ from warnings import warn
 from xml.etree.ElementTree import Element as XmlElement  # nosec B405
 
 from pip._vendor import py_serializable as serializable
-from sortedcontainers import SortedSet
+from pip._vendor.sortedcontainers import SortedSet
 
 from .._internal.compare import ComparableTuple as _ComparableTuple
 from ..exception.model import InvalidLocaleTypeException, InvalidUriException, UnknownHashTypeException

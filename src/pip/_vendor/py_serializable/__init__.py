@@ -44,7 +44,7 @@ from typing import (
 )
 from xml.etree.ElementTree import Element, SubElement
 
-from defusedxml import ElementTree as SafeElementTree  # type:ignore[import-untyped]
+from pip._vendor.defusedxml import ElementTree as SafeElementTree  # type:ignore[import-untyped]
 
 from .formatters import BaseNameFormatter, CurrentFormatter
 from .helpers import BaseHelper

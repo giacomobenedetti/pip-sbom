@@ -20,7 +20,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Iterable, List, Optional, Set
 
 from pip._vendor import py_serializable as serializable
-from sortedcontainers import SortedSet
+from pip._vendor.sortedcontainers import SortedSet
 
 from .._internal.compare import ComparableTuple as _ComparableTuple
 from ..exception.serialization import SerializationOfUnexpectedValueException

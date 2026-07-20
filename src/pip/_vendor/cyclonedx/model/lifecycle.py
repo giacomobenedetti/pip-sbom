@@ -32,7 +32,7 @@ from xml.etree.ElementTree import Element  # nosec B405
 
 from pip._vendor import py_serializable as serializable
 from pip._vendor.py_serializable.helpers import BaseHelper
-from sortedcontainers import SortedSet
+from pip._vendor.sortedcontainers import SortedSet
 
 from .._internal.compare import ComparableTuple as _ComparableTuple
 from ..exception.serialization import CycloneDxDeserializationException

@@ -23,7 +23,7 @@ from uuid import UUID, uuid4
 from warnings import warn
 
 from pip._vendor import py_serializable as serializable
-from sortedcontainers import SortedSet
+from pip._vendor.sortedcontainers import SortedSet
 
 from .._internal.compare import ComparableTuple as _ComparableTuple
 from .._internal.time import get_now_utc as _get_now_utc

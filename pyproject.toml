@@ -205,6 +205,13 @@ setuptools = "pkg_resources"
 
 [tool.vendoring.license.fallback-urls]
 distlib = "https://bitbucket.org/pypa/distlib/raw/master/LICENSE.txt"
+packageurl_python = "https://raw.githubusercontent.com/package-url/packageurl-python/main/mit.LICENSE"
+py_serializable = "https://raw.githubusercontent.com/madpah/serializable/main/LICENSE"
+cyclonedx_python_lib = "https://raw.githubusercontent.com/CycloneDX/cyclonedx-python-lib/main/LICENSE"
+license_expression = "https://raw.githubusercontent.com/aboutcode-org/license-expression/main/apache-2.0.LICENSE"
+boolean_py = "https://raw.githubusercontent.com/bastikr/boolean.py/master/LICENSE.txt"
+sortedcontainers = "https://raw.githubusercontent.com/grantjenks/python-sortedcontainers/master/LICENSE"
+defusedxml = "https://raw.githubusercontent.com/tiran/defusedxml/main/LICENSE"
 
 ######################################################################################
 # ruff

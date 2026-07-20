@@ -15,11 +15,32 @@
       "version": "0.14.4"
     },
     {
+      "bom-ref": "pkg:pypi/boolean.py@5.0",
+      "name": "boolean.py",
+      "purl": "pkg:pypi/boolean.py@5.0",
+      "type": "library",
+      "version": "5.0"
+    },
+    {
       "bom-ref": "pkg:pypi/certifi@2026.6.17",
       "name": "certifi",
       "purl": "pkg:pypi/certifi@2026.6.17",
       "type": "library",
       "version": "2026.6.17"
+    },
+    {
+      "bom-ref": "pkg:pypi/cyclonedx-python-lib@9.1.0",
+      "name": "cyclonedx-python-lib",
+      "purl": "pkg:pypi/cyclonedx-python-lib@9.1.0",
+      "type": "library",
+      "version": "9.1.0"
+    },
+    {
+      "bom-ref": "pkg:pypi/defusedxml@0.7.1",
+      "name": "defusedxml",
+      "purl": "pkg:pypi/defusedxml@0.7.1",
+      "type": "library",
+      "version": "0.7.1"
     },
     {
       "bom-ref": "pkg:pypi/distlib@0.4.2",
@@ -43,11 +64,25 @@
       "version": "3.18"
     },
     {
+      "bom-ref": "pkg:pypi/license-expression@30.4.4",
+      "name": "license-expression",
+      "purl": "pkg:pypi/license-expression@30.4.4",
+      "type": "library",
+      "version": "30.4.4"
+    },
+    {
       "bom-ref": "pkg:pypi/msgpack@1.1.2",
       "name": "msgpack",
       "purl": "pkg:pypi/msgpack@1.1.2",
       "type": "library",
       "version": "1.1.2"
+    },
+    {
+      "bom-ref": "pkg:pypi/packageurl-python@0.16.0",
+      "name": "packageurl-python",
+      "purl": "pkg:pypi/packageurl-python@0.16.0",
+      "type": "library",
+      "version": "0.16.0"
     },
     {
       "bom-ref": "pkg:pypi/packaging@26.2",
@@ -62,6 +97,13 @@
       "purl": "pkg:pypi/platformdirs@4.10.0",
       "type": "library",
       "version": "4.10.0"
+    },
+    {
+      "bom-ref": "pkg:pypi/py-serializable@2.0.0",
+      "name": "py-serializable",
+      "purl": "pkg:pypi/py-serializable@2.0.0",
+      "type": "library",
+      "version": "2.0.0"
     },
     {
       "bom-ref": "pkg:pypi/pygments@2.20.0",
@@ -106,6 +148,13 @@
       "version": "70.3.0"
     },
     {
+      "bom-ref": "pkg:pypi/sortedcontainers@2.4.0",
+      "name": "sortedcontainers",
+      "purl": "pkg:pypi/sortedcontainers@2.4.0",
+      "type": "library",
+      "version": "2.4.0"
+    },
+    {
       "bom-ref": "pkg:pypi/tomli@2.4.1",
       "name": "tomli",
       "purl": "pkg:pypi/tomli@2.4.1",
@@ -138,19 +187,26 @@
     {
       "dependsOn": [
         "pkg:pypi/CacheControl@0.14.4",
+        "pkg:pypi/boolean.py@5.0",
         "pkg:pypi/certifi@2026.6.17",
+        "pkg:pypi/cyclonedx-python-lib@9.1.0",
+        "pkg:pypi/defusedxml@0.7.1",
         "pkg:pypi/distlib@0.4.2",
         "pkg:pypi/distro@1.9.0",
         "pkg:pypi/idna@3.18",
+        "pkg:pypi/license-expression@30.4.4",
         "pkg:pypi/msgpack@1.1.2",
+        "pkg:pypi/packageurl-python@0.16.0",
         "pkg:pypi/packaging@26.2",
         "pkg:pypi/platformdirs@4.10.0",
+        "pkg:pypi/py-serializable@2.0.0",
         "pkg:pypi/pygments@2.20.0",
         "pkg:pypi/pyproject-hooks@1.2.0",
         "pkg:pypi/requests@2.34.2",
         "pkg:pypi/resolvelib@1.2.1",
         "pkg:pypi/rich@14.2.0",
         "pkg:pypi/setuptools@70.3.0",
+        "pkg:pypi/sortedcontainers@2.4.0",
         "pkg:pypi/tomli@2.4.1",
         "pkg:pypi/tomli-w@1.2.0",
         "pkg:pypi/truststore@0.10.4",
@@ -162,7 +218,16 @@
       "ref": "pkg:pypi/CacheControl@0.14.4"
     },
     {
+      "ref": "pkg:pypi/boolean.py@5.0"
+    },
+    {
       "ref": "pkg:pypi/certifi@2026.6.17"
+    },
+    {
+      "ref": "pkg:pypi/cyclonedx-python-lib@9.1.0"
+    },
+    {
+      "ref": "pkg:pypi/defusedxml@0.7.1"
     },
     {
       "ref": "pkg:pypi/distlib@0.4.2"
@@ -174,13 +239,22 @@
       "ref": "pkg:pypi/idna@3.18"
     },
     {
+      "ref": "pkg:pypi/license-expression@30.4.4"
+    },
+    {
       "ref": "pkg:pypi/msgpack@1.1.2"
+    },
+    {
+      "ref": "pkg:pypi/packageurl-python@0.16.0"
     },
     {
       "ref": "pkg:pypi/packaging@26.2"
     },
     {
       "ref": "pkg:pypi/platformdirs@4.10.0"
+    },
+    {
+      "ref": "pkg:pypi/py-serializable@2.0.0"
     },
     {
       "ref": "pkg:pypi/pygments@2.20.0"
@@ -199,6 +273,9 @@
     },
     {
       "ref": "pkg:pypi/setuptools@70.3.0"
+    },
+    {
+      "ref": "pkg:pypi/sortedcontainers@2.4.0"
     },
     {
       "ref": "pkg:pypi/tomli@2.4.1"

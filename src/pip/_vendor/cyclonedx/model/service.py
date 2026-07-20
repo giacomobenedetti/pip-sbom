@@ -27,7 +27,7 @@ This set of classes represents the data that is possible about known Services.
 from typing import Any, Iterable, Optional, Union
 
 from pip._vendor import py_serializable as serializable
-from sortedcontainers import SortedSet
+from pip._vendor.sortedcontainers import SortedSet
 
 from .._internal.bom_ref import bom_ref_from_str as _bom_ref_from_str
 from .._internal.compare import ComparableTuple as _ComparableTuple

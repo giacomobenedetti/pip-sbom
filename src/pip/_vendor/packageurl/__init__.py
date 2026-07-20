@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from collections.abc import Iterable
 
-    from pip._vendor.typing_extensions import Literal
+    from typing_extensions import Literal
 
 # Python 3
 basestring = (

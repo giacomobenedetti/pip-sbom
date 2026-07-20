@@ -3,16 +3,11 @@ import os
 from optparse import Values
 from typing import List
 import json 
-# import networkx as nx
-
-import pip._vendor.networkx as nx
-
 from pip._internal.cli import cmdoptions
 from pip._internal.cli.cmdoptions import make_target_python
 from pip._internal.cli.req_command import RequirementCommand, with_cleanup
 from pip._internal.cli.status_codes import SUCCESS
 from pip._internal.operations.build.build_tracker import get_build_tracker
-from pip._internal.req.req_install import check_legacy_setup_py_options
 from pip._internal.utils.misc import ensure_dir, normalize_path, write_output
 from pip._internal.utils.temp_dir import TempDirectory
 
@@ -41,19 +36,15 @@ class SbomCommand(RequirementCommand):
 
     def add_options(self) -> None:
         self.cmd_opts.add_option(cmdoptions.constraints())
+        self.cmd_opts.add_option(cmdoptions.build_constraints())
         self.cmd_opts.add_option(cmdoptions.requirements())
+        self.cmd_opts.add_option(cmdoptions.requirements_from_scripts())
         self.cmd_opts.add_option(cmdoptions.no_deps())
-        self.cmd_opts.add_option(cmdoptions.global_options())
-        self.cmd_opts.add_option(cmdoptions.no_binary())
-        self.cmd_opts.add_option(cmdoptions.only_binary())
-        self.cmd_opts.add_option(cmdoptions.prefer_binary())
         self.cmd_opts.add_option(cmdoptions.src())
-        self.cmd_opts.add_option(cmdoptions.pre())
         self.cmd_opts.add_option(cmdoptions.require_hashes())
         self.cmd_opts.add_option(cmdoptions.progress_bar())
         self.cmd_opts.add_option(cmdoptions.no_build_isolation())
         self.cmd_opts.add_option(cmdoptions.use_pep517())
-        self.cmd_opts.add_option(cmdoptions.no_use_pep517())
         self.cmd_opts.add_option(cmdoptions.check_build_deps())
         self.cmd_opts.add_option(cmdoptions.ignore_requires_python())
 
@@ -75,7 +66,13 @@ class SbomCommand(RequirementCommand):
             self.parser,
         )
 
+        selection_opts = cmdoptions.make_option_group(
+            cmdoptions.package_selection_group,
+            self.parser,
+        )
+
         self.parser.insert_option_group(0, index_opts)
+        self.parser.insert_option_group(0, selection_opts)
         self.parser.insert_option_group(0, self.cmd_opts)
 
     @with_cleanup
@@ -86,6 +83,8 @@ class SbomCommand(RequirementCommand):
         options.editables = []
 
         cmdoptions.check_dist_restriction(options)
+        cmdoptions.check_build_constraints(options)
+        cmdoptions.check_release_control_exclusive(options)
 
         options.download_dir = normalize_path(options.download_dir)
         ensure_dir(options.download_dir)
@@ -109,7 +108,6 @@ class SbomCommand(RequirementCommand):
         )
 
         reqs = self.get_requirements(args, options, finder, session)
-        check_legacy_setup_py_options(options, reqs)
 
         preparer = self.make_requirement_preparer(
             temp_build_dir=directory,
@@ -127,7 +125,6 @@ class SbomCommand(RequirementCommand):
             finder=finder,
             options=options,
             ignore_requires_python=options.ignore_requires_python,
-            use_pep517=options.use_pep517,
             py_version_info=options.python_version,
         )
 
@@ -135,30 +132,23 @@ class SbomCommand(RequirementCommand):
 
         requirement_set = resolver.resolve(reqs, check_supported_wheels=True)
 
-        dependency_graph = nx.DiGraph()
-
-        from pprint import pprint
-
-        pprint(requirement_set.__dict__)
+        nodes = set()
+        successors = {}
 
         for req in requirement_set.requirements.values():
-
             package_name = f"{req.name} {req.metadata.get('Version', '')}"
-            dependency_graph.add_node(package_name)
-            if req.comes_from:
+            nodes.add(package_name)
+            if req.comes_from and hasattr(req.comes_from, "name") and hasattr(req.comes_from, "metadata"):
                 try:
-                    dependency_graph.add_edge(package_name, f"{req.comes_from.name} {req.comes_from.metadata.get('Version', '')}")
-                except AssertionError:
+                    parent_name = f"{req.comes_from.name} {req.comes_from.metadata.get('Version', '')}"
+                    successors.setdefault(package_name, set()).add(parent_name)
+                except (AssertionError, AttributeError):
                     continue
 
-        self.generate_cyclonedx_sbom(dependency_graph, options.download_dir, args[1])
+        self.generate_cyclonedx_sbom(nodes, successors, options.download_dir, args[1])
         return SUCCESS
 
-
-
-
-
-    def generate_cyclonedx_sbom(self, graph: nx.DiGraph, output_dir: str, package_name: str) -> None:
+    def generate_cyclonedx_sbom(self, nodes: set, successors: dict, output_dir: str, package_name: str) -> None:
 
         from pip._vendor.cyclonedx.model.bom import Bom
         from pip._vendor.cyclonedx.model.component import Component, ComponentType
@@ -168,17 +158,17 @@ class SbomCommand(RequirementCommand):
         import pip._vendor.packageurl as packageurl
 
         bom = Bom()
-        print(graph.nodes)
+        print(nodes)
         
         bom.metadata.component = root_component = Component(
-                name=[x.split(" ")[0] for x in graph.nodes if x.split(" ")[0] == package_name][0],
+                name=[x.split(" ")[0] for x in nodes if x.split(" ")[0] == package_name][0],
                 type=ComponentType.APPLICATION
             ) # type: ignore
         
         # Dictionary to store created components
-        created_components = {[x for x in graph.nodes if x.split(" ")[0] == package_name][0]: root_component}
+        created_components = {[x for x in nodes if x.split(" ")[0] == package_name][0]: root_component}
 
-        for node in graph.nodes:
+        for node in nodes:
             if node not in created_components:
                 name_parts = node.split(" ")
                 component_name = name_parts[0]
@@ -189,7 +179,7 @@ class SbomCommand(RequirementCommand):
                 bom.register_dependency(root_component, [component])
                 created_components[node] = component
             
-            dependencies = list(graph.successors(node))
+            dependencies = list(successors.get(node, []))
             if dependencies:
                 for dep in dependencies:
                     dep_name_parts = dep.split(" ")
